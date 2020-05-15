@@ -20,9 +20,14 @@ package org.terracotta.store.export;
 
 import com.terracottatech.store.definition.CellDefinition;
 
+import java.util.Collections;
 import java.util.HashMap;
 import java.util.Map;
 
+/**
+ * Reports information related to the outcome of the export operation.
+ *
+ */
 public class ParquetExportStats
 {
     private boolean exportSuccess = false;
@@ -34,66 +39,97 @@ public class ParquetExportStats
     private long arraysNullified;
     private Map<CellDefinition<?>, Integer> schemaAbsentCellNoWriteCounts = new HashMap<>();
 
+    /**
+     * @return the number of records that were completely written (all of the cells were accounted for in the output
+     * schema).
+     */
     public long getFullRecordWrites() {
         return fullRecordWrites;
     }
 
-    public void setFullRecordWrites(long fullRecordWrites) {
+    protected void setFullRecordWrites(long fullRecordWrites) {
         this.fullRecordWrites = fullRecordWrites;
     }
 
+    /**
+     * @return the number of records that were partially written (some of the cells were NOT accounted for in the output
+     * schema).
+     */
     public long getPartialRecordWrites() {
         return partialRecordWrites;
     }
 
-    public void setPartialRecordWrites(long partialRecordWrites) {
+    protected void setPartialRecordWrites(long partialRecordWrites) {
         this.partialRecordWrites = partialRecordWrites;
     }
 
+    /**
+     * @return the number of records that were not written to the output file due to error
+     */
     public long getFailedRecordWrites() {
         return failedRecordWrites;
     }
 
-    public void setFailedRecordWrites(long failedRecordWrites) {
+    protected void setFailedRecordWrites(long failedRecordWrites) {
         this.failedRecordWrites = failedRecordWrites;
     }
 
+    /**
+     * @return the total number of records that were processed (which matched criteria for export)
+     */
     public long getRecordsProcessed() {
         return recordsProcessed;
     }
 
-    public void setRecordsProcessed(long recordsProcessed) {
+    protected void setRecordsProcessed(long recordsProcessed) {
         this.recordsProcessed = recordsProcessed;
     }
 
+    /**
+     * @return the number of times a String value of a cell was truncated to match max string length set in
+     * export options
+     * @see ParquetOptions#setMaxStringLength(Integer)
+     */
     public long getStringsTruncated() {
         return stringsTruncated;
     }
 
-    public void setStringsTruncated(long stringsTruncated) {
+    protected void setStringsTruncated(long stringsTruncated) {
         this.stringsTruncated = stringsTruncated;
     }
 
-    public long getArraysNullified() {
+    /**
+     * @return the number of times a byte array value of a cell was nullified in order to match max byte[] length set in
+     * export options
+     * @see ParquetOptions#setMaxByteArraySize(Integer)
+     */
+    public long getByteArraysNullified() {
         return arraysNullified;
     }
 
-    public void setArraysNullified(long arraysNullified) {
+    protected void setByteArraysNullified(long arraysNullified) {
         this.arraysNullified = arraysNullified;
     }
 
+    /**
+     * @return the number of encountered cells that did not match the output schema (i.e. from the sampled cells).
+     */
     public Map<CellDefinition<?>, Integer> getSchemaAbsentCellNoWriteCounts() {
-        return schemaAbsentCellNoWriteCounts;
+        return Collections.unmodifiableMap(schemaAbsentCellNoWriteCounts);
     }
 
-    public void addSchemaAbsentCellCounts(CellDefinition<?> cellDef, Integer count) {
+    protected void addSchemaAbsentCellCounts(CellDefinition<?> cellDef, Integer count) {
         this.schemaAbsentCellNoWriteCounts.put(cellDef, count);
     }
+
+    /**
+     * @return whether the export file was successfully created
+     */
     public boolean getExportSuccess() {
         return exportSuccess;
     }
 
-    public void setExportSuccess(boolean exportStatus) {
+    protected void setExportSuccess(boolean exportStatus) {
         this.exportSuccess = exportStatus;
     }
 }

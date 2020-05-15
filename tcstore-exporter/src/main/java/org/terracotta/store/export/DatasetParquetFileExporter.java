@@ -33,11 +33,13 @@ import org.apache.hadoop.conf.Configuration;
 import org.apache.hadoop.fs.Path;
 import org.apache.parquet.avro.AvroParquetWriter;
 import org.apache.parquet.column.ParquetProperties;
+import org.apache.parquet.hadoop.ParquetFileWriter;
 import org.apache.parquet.hadoop.ParquetWriter;
 import org.slf4j.Logger;
 import org.slf4j.LoggerFactory;
 
 import java.io.File;
+import java.io.IOException;
 import java.nio.file.Files;
 import java.text.DateFormat;
 import java.text.SimpleDateFormat;
@@ -47,6 +49,9 @@ import java.util.function.Predicate;
 
 import static java.util.Objects.requireNonNull;
 
+/**
+ * Utility for exporting the contents, or a subset thereof, of a Dataset to one or more Parquet files.
+ */
 public class DatasetParquetFileExporter
 {
     private static final Logger LOG = LoggerFactory.getLogger(DatasetParquetFileExporter.class);
@@ -61,12 +66,22 @@ public class DatasetParquetFileExporter
     private List<String> crcFileNames;
     private Map<Schema, ParquetWriter<GenericData.Record>> schemaWriterMap;
 
+    /**
+     * Create a DatasetParquetFileExporter with the given settings.
+     *
+     * @param dsManager an initialized DatasetManager from which to work
+     * @param datasetName the name of the Dataset from which to export records
+     * @param datasetType the key type of the Dataset from which to export records
+     * @param outputFileFolder the name of the folder in which to output files
+     * @param options options to control aspects of the export processing
+     * @throws Exception
+     * @see ParquetOptions
+     */
     public DatasetParquetFileExporter(DatasetManager dsManager,
                                       String datasetName,
                                       Type datasetType,
                                       String outputFileFolder,
-                                      ParquetOptions options) throws Exception
-    {
+                                      ParquetOptions options) throws StoreExportException {
         this.dsManager = requireNonNull(dsManager);
         this.options = requireNonNull(options);
         this.datasetName = datasetName;
@@ -77,29 +92,52 @@ public class DatasetParquetFileExporter
         if (!(Files.exists(folder) && Files.isDirectory((folder)))) {
             String error = "Folder '" + outputFileFolder + "' does not exist or is not a directory.";
             LOG.error(error);
-            throw new Exception();
+            throw new StoreExportException(error);
         }
         schemas = new ParquetSchema(dsManager, datasetName, datasetType, options);
     }
 
-    public ParquetExportStats exportDataset()
+    /**
+     * Export all records in the dataset.
+     *
+     * @return information about the outcome of the export operation
+     * @see ParquetExportStats
+     */
+    public ParquetExportStats exportDataset() throws StoreExportException
     {
         LOG.info("Exporting all dataset records");
         return export(null); // no filter
     }
 
-    public ParquetExportStats exportDataset(Predicate<Record<?>> filterPredicate)
+    /**
+     * Export all records in the dataset which match the given Predicate
+     *
+     * @return information about the outcome of the export operation
+     * @see ParquetExportStats
+     */
+    public ParquetExportStats exportDataset(Predicate<Record<?>> filterPredicate) throws StoreExportException
     {
         LOG.info("Exporting dataset records using custom filter");
         return export(filterPredicate);
     }
 
-    public ParquetExportStats exportDataset(Double lowRangeValue, Double highRangeValue) {
+    /**
+     * Export all records in the dataset which match a Predicate that will be build using the cell identified in the
+     * {@link ParquetOptions} this DatasetParquetFileExporter was initialized with, predicating that its values fall within
+     * the given range.
+     *
+     * @param highRangeValue include records with values less than this value in the predicate cell.
+     * @param lowRangeValue include records with values equal to or greater than this value in the predicate cell.
+     * @return information about the outcome of the export operation
+     * @see ParquetOptions
+     * @see ParquetExportStats
+     */
+    public ParquetExportStats exportDataset(Number lowRangeValue, Number highRangeValue)  throws StoreExportException {
         // Supported behaviour includes::
         //   If filter cell has not been defined then abort or continue
         //   If filter cell has been defined but has an unsupported type then abort or continue
         //   If filter cell has been defined but does not exist then abort or continue
-        //   If filter cell has been defined and exists then conntinue
+        //   If filter cell has been defined and exists then continue
         //   'Abort' or 'continue' is based upon whether the 'Ignore Abort' option has been set
 
         ParquetExportStats stats = new ParquetExportStats();
@@ -126,7 +164,7 @@ public class DatasetParquetFileExporter
             }
             else if (filterCellType.equals(Type.DOUBLE)) {
                 DoubleCellDefinition cell = CellDefinition.defineDouble(filterCellName);
-                rangeFilter = (cell.value().isGreaterThanOrEqualTo(lowRangeValue).and(cell.value().isLessThan(highRangeValue)));
+                rangeFilter = (cell.value().isGreaterThanOrEqualTo(lowRangeValue.doubleValue()).and(cell.value().isLessThan(highRangeValue.doubleValue())));
             }
             else {
                 LOG.warn("Unsupported cell type '" + filterCellType + "' for Range Filter.");
@@ -142,11 +180,12 @@ public class DatasetParquetFileExporter
         }
         else {
             LOG.warn("Aborting.  No records written.");
+            stats.setExportSuccess(false);
         }
         return stats;
     }
 
-    private ParquetExportStats export(Predicate<Record<?>> filterPredicate)
+    private ParquetExportStats export(Predicate<Record<?>> filterPredicate) throws StoreExportException
     {
         ParquetExportStats stats = new ParquetExportStats();
 
@@ -290,7 +329,7 @@ public class DatasetParquetFileExporter
                 stats.setPartialRecordWrites(partialRecordWrites.get());
                 stats.setFailedRecordWrites(failedRecordWrites.get());
                 stats.setStringsTruncated(stringsTruncated.get());
-                stats.setArraysNullified(arraysNullified.get());
+                stats.setByteArraysNullified(arraysNullified.get());
 
                 LOG.info(String.format("%,d records processed.  Processing complete.", stats.getRecordsProcessed()));
                 LOG.info(String.format("%,d complete records written to parquet file", stats.getFullRecordWrites()));
@@ -303,11 +342,12 @@ public class DatasetParquetFileExporter
                     stats.addSchemaAbsentCellCounts(entry.getKey(), entry.getValue());
                 }
                 LOG.info(String.format("%,d string values were truncated (max character length = %,d)", stats.getStringsTruncated(), maxStringLength));
-                LOG.info(String.format("%,d large-size byte arrays were omitted (max array length = %,d)", stats.getArraysNullified(), maxByteArraySize));
+                LOG.info(String.format("%,d large-size byte arrays were omitted (max array length = %,d)", stats.getByteArraysNullified(), maxByteArraySize));
             }
         }
         catch (Exception ex) {
             LOG.error("Exception exporting dataset: " + ex.getMessage());
+            stats.setExportSuccess(false);
         }
         finally {
             closeWriters();
@@ -351,23 +391,21 @@ public class DatasetParquetFileExporter
         }
     }
 
-    private ParquetWriter<GenericData.Record> initializeWriter(Schema schema, String fileName) throws Exception
+    private ParquetWriter<GenericData.Record> initializeWriter(Schema schema, String fileName) throws IOException
     {
         ParquetWriter<GenericData.Record> writer;
         try {
             Path parquetFilePath = new Path(this.outputFileFolder, fileName);
             writer = AvroParquetWriter.<GenericData.Record>builder(parquetFilePath)
-                    .withWriteMode(org.apache.parquet.hadoop.ParquetFileWriter.Mode.CREATE)
-                    .withSchema(schema)
-                    .withConf(getConfiguration())
-                    .withCompressionCodec(options.getCompression())
-                    .withPageSize(options.getPageSize()) //For compression
-                    .withRowGroupSize(options.getRowGroupSize()) //For write buffering (Page size)
-                    .withWriterVersion(ParquetProperties.WriterVersion.PARQUET_1_0) //PARQUET_2_0
-                    .build();
-        }
-        catch (Exception ex)
-        {
+                .withWriteMode(ParquetFileWriter.Mode.CREATE)
+                .withSchema(schema)
+                .withConf(getConfiguration())
+                .withCompressionCodec(options.getCompression())
+                .withPageSize(options.getPageSize()) //For compression
+                .withRowGroupSize(options.getRowGroupSize()) //For write buffering (Page size)
+                .withWriterVersion(ParquetProperties.WriterVersion.PARQUET_1_0) //PARQUET_2_0
+                .build();
+        } catch (IOException ex) {
             LOG.error("Exception creating Parquet File Writer: " + ex.getMessage());
             throw ex;
         }
@@ -380,7 +418,7 @@ public class DatasetParquetFileExporter
             try {
                 v.close();
             }
-            catch (Exception ex) {
+            catch (IOException ex) {
                 LOG.error("Exception closing the parquet writer: " + ex.getMessage());
             }
         });
@@ -440,6 +478,9 @@ public class DatasetParquetFileExporter
         }
     }
 
+    /**
+     * @return The discovered schema.
+     */
     public ParquetSchema getSchemas() {
         return schemas;
     }
