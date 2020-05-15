@@ -26,6 +26,14 @@ import org.slf4j.LoggerFactory;
 import java.util.HashSet;
 import java.util.Set;
 
+/**
+ * Options for the export of Dataset contents to a parquet file.
+ *
+ * Parquet file generation best practices:
+ *     https://docs.dremio.com/advanced-administration/parquet-files.html?h=parquet
+ *
+ *     Also see https://parquet.apache.org/documentation/latest/
+ */
 public class ParquetOptions {
 
     private static final Logger LOG = LoggerFactory.getLogger(ParquetOptions.class);
@@ -62,6 +70,15 @@ public class ParquetOptions {
     private Integer maxStringLength = -1;
     private Integer maxByteArraySize = -1;
 
+    /**
+     * Add a cell to the "whitelist" of cells that should be include from output
+     *
+     * If there is no whitelist or blacklist then all cells will be candidates for output
+     *
+     * @param name the name of the cell
+     * @param type the Type of the cell
+     * @see #addBlackListCell(String, Type)
+     */
     public void addWhiteListCell(String name, Type type) {
         try {
             whiteListCells.add(CellDefinition.define(name.trim(), type));
@@ -69,6 +86,18 @@ public class ParquetOptions {
             LOG.warn("Exception adding Export Allowed cell: " + ex.getMessage());
         }
     }
+
+    /**
+     * Add a cell to the "blacklist" of cells that should be excluded from output
+     *
+     * If a whitelist is used, a blacklist will be ignored.
+     *
+     * If there is no whitelist or blacklist then all cells will be candidates for output
+     *
+     * @param name the name of the cell
+     * @param type the Type of the cell
+     * @see #addWhiteListCell(String, Type)
+     */
     public void addBlackListCell(String name, Type type) {
         try {
             blackListCells.add(CellDefinition.define(name.trim(), type));
@@ -77,6 +106,11 @@ public class ParquetOptions {
         }
     }
 
+    /**
+     * Identify the cell on which to base a filter predicate (in order to output a subset of records)
+     * @param name the name of the cell
+     * @param type the Type of the cell
+     */
     public void setFilterCell(String name, Type type) {
         filterCellName = name;
         filterCellType = type;
@@ -100,6 +134,9 @@ public class ParquetOptions {
         return compression;
     }
 
+    /**
+     * @param compression parquet file output setting
+     */
     public void setCompression(CompressionCodecName compression) {
         this.compression = compression;
     }
@@ -108,6 +145,9 @@ public class ParquetOptions {
         return pageSize;
     }
 
+    /**
+     * @param pageSize parquet file output setting
+     */
     public void setPageSize(Integer pageSize) {
         this.pageSize = pageSize;
     }
@@ -116,6 +156,9 @@ public class ParquetOptions {
         return rowGroupSize;
     }
 
+    /**
+     * @param rowGroupSize  parquet file output setting
+     */
     public void setRowGroupSize(Integer rowGroupSize) {
         this.rowGroupSize = rowGroupSize;
     }
@@ -124,6 +167,10 @@ public class ParquetOptions {
         return schemaSampleSize;
     }
 
+    /**
+     * @param schemaSampleSize the number of records to sample to discover the schema for output (the union of all
+     *                         cells found on those records will become the assumed schema). Default is 5.
+     */
     public void setSchemaSampleSize(Integer schemaSampleSize) {
         this.schemaSampleSize = schemaSampleSize;
     }
@@ -132,6 +179,10 @@ public class ParquetOptions {
         return appendTypeToSchemaFieldName;
     }
 
+    /**
+     * @param appendTypeToSchemaFieldName Whether output column names should have the cell's type information appended
+     *                                    to their name.  E.g. "foo_INT" rather than just "foo".
+     */
     public void setAppendTypeToSchemaFieldName(Boolean appendTypeToSchemaFieldName) {
         this.appendTypeToSchemaFieldName = appendTypeToSchemaFieldName;
     }
@@ -148,6 +199,10 @@ public class ParquetOptions {
         return doNotAbortIfFilterCellMissing;
     }
 
+    /**
+     * @param doNotAbortIfFilterCellMissing whether or not the export should fail if the indicated filter predicate
+     *                                      cell is missing from records
+     */
     public void setDoNotAbortIfFilterCellMissing(Boolean doNotAbortIfFilterCellMissing) {
         this.doNotAbortIfFilterCellMissing = doNotAbortIfFilterCellMissing;
     }
@@ -156,6 +211,12 @@ public class ParquetOptions {
         return maxOutputColumns;
     }
 
+    /**
+     * The maximum number of columns to write to a single parquet file.  Default maximum is 800.
+     * @param maxOutputColumns
+     * @see #setMaxOutputColumnsNoAbort(Boolean)
+     * @see #setMaxOutputColumnsUseMultiFile(Boolean)
+     */
     public void setMaxOutputColumns(Integer maxOutputColumns) {
         this.maxOutputColumns = maxOutputColumns;
     }
@@ -164,6 +225,11 @@ public class ParquetOptions {
         return maxOutputColumnsNoAbort;
     }
 
+    /**
+     * @param maxOutputColumnsNoAbort whether the export process should fail if too many cells are encountered on
+     *                                records
+     * @see #setMaxOutputColumns(Integer)
+     */
     public void setMaxOutputColumnsNoAbort(Boolean maxOutputColumnsNoAbort) {
         this.maxOutputColumnsNoAbort = maxOutputColumnsNoAbort;
     }
@@ -172,6 +238,11 @@ public class ParquetOptions {
         return maxOutputColumnsUseMultiFile;
     }
 
+    /**
+     * If the records contain a large number of cells, you may wish to output records into multiple parquet files, each
+     * with a subset of the cells.  Each file will contain the record key.
+     * @param maxOutputColumnsUseMultiFile whether large records should be split across multiple files.
+     */
     public void setMaxOutputColumnsUseMultiFile(Boolean maxOutputColumnsUseMultiFile) {
         this.maxOutputColumnsUseMultiFile = maxOutputColumnsUseMultiFile;
     }
@@ -180,6 +251,9 @@ public class ParquetOptions {
         return logStreamPlan;
     }
 
+    /**
+     * @param logStreamPlan whether the query plan for the stream processing should be output to the log
+     */
     public void setLogStreamPlan(Boolean logStreamPlan) {
         this.logStreamPlan = logStreamPlan;
     }
@@ -196,6 +270,9 @@ public class ParquetOptions {
         return maxStringLength;
     }
 
+    /**
+     * @param maxStringLength the maximum length of String to be output.  Default is -1, meaning no maximum enforced
+     */
     public void setMaxStringLength(Integer maxStringLength) {
         this.maxStringLength = maxStringLength;
     }
@@ -204,6 +281,9 @@ public class ParquetOptions {
         return maxByteArraySize;
     }
 
+    /**
+     * @param maxByteArraySize the maximum size of byte[]s to be output.  Default is -1, meaning no maximum enforced
+     */
     public void setMaxByteArraySize(Integer maxByteArraySize) {
         this.maxByteArraySize = maxByteArraySize;
     }

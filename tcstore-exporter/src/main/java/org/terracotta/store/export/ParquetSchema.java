@@ -48,23 +48,24 @@ public class ParquetSchema {
     private Map<CellDefinition<?>, String> uniqueFieldNames;
     private Map<CellDefinition<?>, Schema> cellDefinitionSchemaMap;
 
-    ParquetSchema(DatasetManager dsManager, String datasetName, Type datasetType, ParquetOptions options) throws Exception
+    ParquetSchema(DatasetManager dsManager, String datasetName, Type datasetType, ParquetOptions options) throws StoreExportException
     {
         this.dsManager = requireNonNull(dsManager);
         this.options = requireNonNull(options);
         this.datasetName = datasetName;
         this.datasetType = datasetType;
         uniqueFieldNames = new HashMap<>();
-        if (!Initialize())
-        {
+        try {
+            initialize();
+        }
+        catch (StoreExportException se){
             String status = "Dataset Export to Parquet was Aborted.";
-            LOG.warn(status);
-            throw new Exception(status);
+            LOG.warn(status, se);
+            throw new StoreExportException(status, se);
         }
     }
 
-    private Boolean Initialize()
-    {
+    private void initialize() throws StoreExportException {
         // Schema initialization must be completed before any dataset export can happen.
         // - sample the target dataset for all unique cells
         // - modify the uniqe cells based on whitelisted and blacklisted cells
@@ -74,7 +75,6 @@ public class ParquetSchema {
         // - populate maps so that the ParquetWriter can determine to which file/schema each
         //   cell in each streamed record is to be written.
 
-        boolean success = true;
         schemas = new ArrayList<>();
         cellDefinitionSchemaMap = new HashMap<>();
 
@@ -114,7 +114,7 @@ public class ParquetSchema {
                 }
                 else {
                     LOG.info("'Ignore Abort' option has NOT been set.  Aborting.");
-                    success = false;
+                    throw new StoreExportException("The number of unique cells (" + columnCount + ") is greater than the maximum allowed (" + maxColumns + ") parquet columns.");
                 }
                 if (options.getMaxOutputColumnsUseMultiFile()) {
                     // split cells into multiple schemas
@@ -122,54 +122,51 @@ public class ParquetSchema {
                 }
             }
 
-            if (success) {
-                if (useSingleSchema) {
-                    // Since uniqueCells is not sorted, check if the filter cell exists then add
-                    // that at index 1 (after the REC_KEY at index 0) of a new sorted set (just to make
-                    // viewing the contents of the parquet pretty).
+            if (useSingleSchema) {
+                // Since uniqueCells is not sorted, check if the filter cell exists then add
+                // that at index 1 (after the REC_KEY at index 0) of a new sorted set (just to make
+                // viewing the contents of the parquet pretty).
 
-                    Set<CellDefinition<?>> sortedUniqueCells = new LinkedHashSet<>(); //preserves insertion ordering
-                    sortedUniqueCells.add(CellDefinition.define(REC_KEY, datasetType)); // 'RecKey' is always needed
-                    if (usingFilterCell)
-                        sortedUniqueCells.add(options.getFilterCell());
-                    sortedUniqueCells.addAll(uniqueCells);
-                    Schema schema = createSchema(sortedUniqueCells);
-                    schemas.add(schema);
-                    for (CellDefinition<?> cell : sortedUniqueCells)
-                        cellDefinitionSchemaMap.put(cell, schema);
+                Set<CellDefinition<?>> sortedUniqueCells = new LinkedHashSet<>(); //preserves insertion ordering
+                sortedUniqueCells.add(CellDefinition.define(REC_KEY, datasetType)); // 'RecKey' is always needed
+                if (usingFilterCell)
+                    sortedUniqueCells.add(options.getFilterCell());
+                sortedUniqueCells.addAll(uniqueCells);
+                Schema schema = createSchema(sortedUniqueCells);
+                schemas.add(schema);
+                for (CellDefinition<?> cell : sortedUniqueCells)
+                    cellDefinitionSchemaMap.put(cell, schema);
+            }
+            else {
+                // We're going to create multiple schemas to generate multiple parquet files
+                int cellCount = maxColumns; // to trigger Set creation in for loop
+                List<Set<CellDefinition<?>>> setList = new ArrayList<>();
+                Set<CellDefinition<?>> sortedUniqueCells = null;
+                for (CellDefinition<?> cell : uniqueCells) {
+                    if (cellCount >= maxColumns) {
+                        // create a new set for this chunk of cells
+                        sortedUniqueCells = new LinkedHashSet<>(); //preserves insertion ordering
+                        sortedUniqueCells.add(CellDefinition.define(REC_KEY, datasetType)); // 'RecKey' is always needed
+                        if (usingFilterCell)
+                            sortedUniqueCells.add(options.getFilterCell());
+
+                        setList.add(sortedUniqueCells);
+                    }
+                    sortedUniqueCells.add(cell);
+                    cellCount = sortedUniqueCells.size();
                 }
-                else {
-                    // We're going to create multiple schemas to generate multiple parquet files
-                    int cellCount = maxColumns; // to trigger Set creation in for loop
-                    List<Set<CellDefinition<?>>> setList = new ArrayList<>();
-                    Set<CellDefinition<?>> sortedUniqueCells = null;
-                    for (CellDefinition<?> cell : uniqueCells) {
-                        if (cellCount >= maxColumns) {
-                            // create a new set for this chunk of cells
-                            sortedUniqueCells = new LinkedHashSet<>(); //preserves insertion ordering
-                            sortedUniqueCells.add(CellDefinition.define(REC_KEY, datasetType)); // 'RecKey' is always needed
-                            if (usingFilterCell)
-                                sortedUniqueCells.add(options.getFilterCell());
-
-                            setList.add(sortedUniqueCells);
-                        }
-                        sortedUniqueCells.add(cell);
-                        cellCount = sortedUniqueCells.size();
-                    }
-                    for (Set<CellDefinition<?>> cellSet : setList) {
-                        Schema schema = createSchema(cellSet);
-                        schemas.add(schema);
-                        for (CellDefinition<?> cell : cellSet)
-                            cellDefinitionSchemaMap.put(cell, schema);
-                    }
+                for (Set<CellDefinition<?>> cellSet : setList) {
+                    Schema schema = createSchema(cellSet);
+                    schemas.add(schema);
+                    for (CellDefinition<?> cell : cellSet)
+                        cellDefinitionSchemaMap.put(cell, schema);
                 }
             }
         }
         catch (Exception ex) {
-            success = false;
-            LOG.error("Exception initializing schema from dataset: " + ex.getMessage());
+            LOG.error("Exception initializing schema from dataset: ", ex);
+            throw new StoreExportException("Exception initializing schema from dataset: " + ex.getMessage(), ex);
         }
-        return success;
     }
 
     private Schema createSchema(Set<CellDefinition<?>> uniqueCells)
