@@ -71,39 +71,29 @@ public class ParquetOptions {
     private Integer maxByteArraySize = -1;
 
     /**
-     * Add a cell to the "whitelist" of cells that should be include from output
+     * Add a cell to the "whitelist" of cells that should be included in the output
      *
      * If there is no whitelist or blacklist then all cells will be candidates for output
      *
-     * @param name the name of the cell
-     * @param type the Type of the cell
-     * @see #addBlackListCell(String, Type)
+     * @param cellDef the whitelisted cell definition
+     * @see #addBlackListCellDefinition(CellDefinition)
      */
-    public void addWhiteListCell(String name, Type type) {
-        try {
-            whiteListCells.add(CellDefinition.define(name.trim(), type));
-        } catch (Exception ex) {
-            LOG.warn("Exception adding Export Allowed cell: " + ex.getMessage());
-        }
+    public void addWhiteListCellDefinition(CellDefinition<?> cellDef) {
+        whiteListCells.add(cellDef);
     }
 
     /**
-     * Add a cell to the "blacklist" of cells that should be excluded from output
+     * Add a cell to the "blacklist" of cells that should be excluded from the output
      *
      * If a whitelist is used, a blacklist will be ignored.
      *
      * If there is no whitelist or blacklist then all cells will be candidates for output
      *
-     * @param name the name of the cell
-     * @param type the Type of the cell
-     * @see #addWhiteListCell(String, Type)
+     * @param cellDef the blacklisted cell definition
+     * @see #addWhiteListCellDefinition(CellDefinition)
      */
-    public void addBlackListCell(String name, Type type) {
-        try {
-            blackListCells.add(CellDefinition.define(name.trim(), type));
-        } catch (Exception ex) {
-            LOG.warn("Exception adding Non-Export Allowed cell: " + ex.getMessage());
-        }
+    public void addBlackListCellDefinition(CellDefinition<?> cellDef) {
+        blackListCells.add(cellDef);
     }
 
     /**
@@ -180,7 +170,7 @@ public class ParquetOptions {
     }
 
     /**
-     * @param appendTypeToSchemaFieldName Whether output column names should have the cell's type information appended
+     * @param appendTypeToSchemaFieldName whether output column names should have the cell's type information appended
      *                                    to their name.  E.g. "foo_INT" rather than just "foo".
      */
     public void setAppendTypeToSchemaFieldName(Boolean appendTypeToSchemaFieldName) {
@@ -240,7 +230,7 @@ public class ParquetOptions {
 
     /**
      * If the records contain a large number of cells, you may wish to output records into multiple parquet files, each
-     * with a subset of the cells.  Each file will contain the record key.
+     * with a subset of the cells.  Each file will contain the record key and if configured, the filter cell as well.
      * @param maxOutputColumnsUseMultiFile whether large records should be split across multiple files.
      */
     public void setMaxOutputColumnsUseMultiFile(Boolean maxOutputColumnsUseMultiFile) {
