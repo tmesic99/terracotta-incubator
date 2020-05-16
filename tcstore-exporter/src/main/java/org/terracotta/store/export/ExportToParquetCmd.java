@@ -18,6 +18,7 @@
 package org.terracotta.store.export;
 
 import com.terracottatech.store.Type;
+import com.terracottatech.store.definition.CellDefinition;
 import com.terracottatech.store.manager.DatasetManager;
 import org.slf4j.Logger;
 import org.slf4j.LoggerFactory;
@@ -64,11 +65,19 @@ public class ExportToParquetCmd
             options.setMaxStringLength(cmd.getMaxStringLength());
             options.setMaxByteArraySize(cmd.getMaxByteArraySize());
             List<String> whiteListCells = cmd.getWhiteListCellsNamesTypes();
-            for (int i = 0; i < cmd.getWhiteListCellsNamesTypes().size(); i++)
-                options.addWhiteListCell(whiteListCells.get(i), cmd.getType(whiteListCells.get(++i)));
+            for (int i = 0; i < cmd.getWhiteListCellsNamesTypes().size(); i++) {
+                CellDefinition<?> cellDef = CellDefinition.define(
+                        whiteListCells.get(i).trim(),
+                        cmd.getType(whiteListCells.get(++i))); //abort if define() fails
+                options.addWhiteListCellDefinition(cellDef);
+            }
             List<String> blackListCells = cmd.getBlackListCellsNamesTypes();
-            for (int i = 0; i < blackListCells.size(); i++)
-                options.addBlackListCell(blackListCells.get(i), cmd.getType(blackListCells.get(++i)));
+            for (int i = 0; i < blackListCells.size(); i++) {
+                CellDefinition<?> cellDef = CellDefinition.define(
+                        blackListCells.get(i).trim(),
+                        cmd.getType(blackListCells.get(++i))); //abort if define() fails
+                options.addBlackListCellDefinition(cellDef);
+            }
 
             LOG.info("Connecting to server: '" + uri + "'");
             try (DatasetManager dsManager = DatasetManager.clustered((new URI(uri))).build()) {

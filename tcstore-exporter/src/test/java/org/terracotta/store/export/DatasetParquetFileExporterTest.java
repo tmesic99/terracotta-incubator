@@ -56,7 +56,7 @@ public class DatasetParquetFileExporterTest {
                 //"-mcmf",
 
                 //"-e", "C0001,LONG, C0002,DOUBLE, C0003,BOOL",
-                //"-b", "C0001,LONG, C0003,DOUBLE, C0003,BOOL",
+                //"-n", "C0001,LONG, C0003,DOUBLE, C0003,BOOL",
                 //"-ms", "0",
                 //"-mb", "0",
 
@@ -80,7 +80,7 @@ public class DatasetParquetFileExporterTest {
                 "-fhv", "2000000000xxxxx",
                 "-mc", "2",
                 "-e", "C1,LONGzz, C2,DOUBLEzz, C3,BOOLzz",
-                "-b", "C41,,,,LONG",
+                "-n", "C41,,,,LONG",
                 "-ms", "256xxx",
                 "-mb", "14000xxx",
                 "xxxx",
@@ -119,12 +119,12 @@ public class DatasetParquetFileExporterTest {
         //options.setMaxByteArraySize(1024*4); // default == -1 --> no limit
 
         // Cell Whitelisting - only include these cells in the schema/parquet file
-        //options.addWhiteListCell("C0001",  Type.LONG);
-        //options.addWhiteListCell("C0004",  Type.BOOL);
+        //options.addWhiteListCellDefinition(CellDefinition.define("C0001", Type.LONG));
+        //options.addWhiteListCellDefinition(CellDefinition.define("C0004", Type.BOOL));
 
         // Cell Blacklisting - exclude cells from the schema/parquet file (if no whitelisting defined)
-        //options.addBlackListCell("C0001",  Type.LONG);
-        //options.addBlackListCell("PdfCell",  Type.BYTES);
+        //options.addBlackListCellDefinition(CellDefinition.define("C0001",  Type.LONG));
+        //options.addBlackListCellDefinition(CellDefinition.define("PdfCell",  Type.BYTES));
 
         options.setLogStreamPlan(true);
 
