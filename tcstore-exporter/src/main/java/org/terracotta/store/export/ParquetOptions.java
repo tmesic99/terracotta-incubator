@@ -98,20 +98,12 @@ public class ParquetOptions {
 
     /**
      * Identify the cell on which to base a filter predicate (in order to output a subset of records)
-     * @param name the name of the cell
-     * @param type the Type of the cell
+     * @param cell the cell to predicate the export of records upon
      */
-    public void setFilterCell(String name, Type type) {
-        filterCellName = name;
-        filterCellType = type;
-        try {
-            filterCell = CellDefinition.define(name.trim(), type);
-        } catch (Exception ex) {
-            filterCell = null;
-            LOG.warn("Exception setting range filter cell: " + ex.getMessage());
-            LOG.warn("Range Filter cannot be used");
-        }
+    public void setFilterCell(CellDefinition<?> cell) {
+        this.filterCell = cell;
     }
+
     public Boolean isFilterCell(CellDefinition<?> cell) {
         return filterCell == null ? false : filterCell.equals(cell);
     }

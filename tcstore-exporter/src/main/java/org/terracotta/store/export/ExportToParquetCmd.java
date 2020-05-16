@@ -55,8 +55,17 @@ public class ExportToParquetCmd
             ParquetOptions options = new ParquetOptions();
             options.setSchemaSampleSize(cmd.getSchemaSampleSize());
             options.setAppendTypeToSchemaFieldName(cmd.getAppendTypeToSchemaFieldName());
-            if (cmd.getUseFilterRange())
-                options.setFilterCell(cmd.getFilterCellName(), cmd.getType(cmd.getFilterCellType()));
+            if (cmd.getUseFilterRange()) {
+                CellDefinition<?> filterCell;
+                try {
+                    filterCell = CellDefinition.define(cmd.getFilterCellName().trim(), cmd.getType(cmd.getFilterCellType()));
+                } catch (Exception ex) {
+                    LOG.error("Exception setting range filter cell: " + ex.getMessage(), ex);
+                    LOG.error("Range Filter cannot be used");
+                    return;
+                }
+                options.setFilterCell(filterCell);
+            }
             options.setDoNotAbortIfFilterCellMissing(cmd.getDoNotAbortExportIfFilterCellMissing());
             options.setMaxOutputColumns(cmd.getMaxOutputColumns());
             options.setMaxOutputColumnsNoAbort(cmd.getMaxOutputColumnsNoAbort());
