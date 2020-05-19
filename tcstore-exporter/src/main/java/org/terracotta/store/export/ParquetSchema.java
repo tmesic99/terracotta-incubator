@@ -216,46 +216,46 @@ public class ParquetSchema {
 
     private String getAvroType(Type type)
     {
-        String avroType;
-        if (type.equals(Type.BOOL))
-            avroType = "boolean";
-        else if (type.equals(Type.CHAR))
-            avroType = "string";
-        else if (type.equals(Type.INT))
-            avroType = "int";
-        else if (type.equals(Type.LONG))
-            avroType = "long";
-        else if (type.equals(Type.DOUBLE))
-            avroType = "double";
-        else if (type.equals(Type.STRING))
-            avroType = "string";
-        else if (type.equals(Type.BYTES))
-            avroType = "bytes";
-        else
-            avroType = "null";
-        return avroType;
+        switch (type.asEnum()) {
+            case BOOL:
+                return "boolean";
+            case CHAR:
+                return "string";
+            case INT:
+                return "int";
+            case LONG:
+                return "long";
+            case DOUBLE:
+                return "double";
+            case STRING:
+                return "string";
+            case BYTES:
+                return "bytes";
+            default:
+                return null;
+        }
     }
 
     public String getTcType(Type type)
     {
-        String tcType;
-        if (type.equals(Type.BOOL))
-            tcType = "BOOLEAN";
-        else if (type.equals(Type.CHAR))
-            tcType = "CHAR";
-        else if (type.equals(Type.INT))
-            tcType = "INT";
-        else if (type.equals(Type.LONG))
-            tcType = "LONG";
-        else if (type.equals(Type.DOUBLE))
-            tcType = "DOUBLE";
-        else if (type.equals(Type.STRING))
-            tcType = "STRING";
-        else if (type.equals(Type.BYTES))
-            tcType = "BYTES";
-        else
-            tcType = "";
-        return tcType;
+        switch (type.asEnum()) {
+            case BOOL:
+                return "BOOLEAN";
+            case CHAR:
+                return "CHAR";
+            case INT:
+                return "INT";
+            case LONG:
+                return "LONG";
+            case DOUBLE:
+                return "DOUBLE";
+            case STRING:
+                return "STRING";
+            case BYTES:
+                return "BYTES";
+            default:
+                return "";
+        }
     }
 
     public String getFieldName(CellDefinition<?> cell) {

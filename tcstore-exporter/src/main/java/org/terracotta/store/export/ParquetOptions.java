@@ -102,6 +102,10 @@ public class ParquetOptions {
      */
     public void setFilterCell(CellDefinition<?> cell) {
         this.filterCell = cell;
+        if (cell != null) {
+            filterCellName = cell.name();
+            filterCellType = cell.type();
+        }
     }
 
     public Boolean isFilterCell(CellDefinition<?> cell) {
