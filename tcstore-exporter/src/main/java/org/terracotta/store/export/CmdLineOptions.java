@@ -410,15 +410,15 @@ public class CmdLineOptions
         return "\n" +
                 "Export a dataset to a parquet file.  Use the cells present in the dataset's records\n" +
                 "to deduce the schema (i.e. field names and types) required for the parquet file.\n\n" +
-                "terracotta-parquet.jar -s server -d datasetName -t datasetType -o outputFolder\n" +
+                "terracotta-tcstore-exporter.jar -s server -d datasetName -t datasetType -o outputFolder\n" +
                 "                       [-ss schemaSampleSize] [-a]\n" +
                 "                       [-fn cellName -ft cellType -flv lowValue -fhv highValue] [-ia]\n" +
                 "                       [-mc maxColumns] [-mcia] [-mcmf]\n" +
                 "                       [-ms maxStringLength] [-mb maxByteLength] [-e <cellname, celltype>,...] [--n <cellname, celltype>,...] [-p]\n\n" +
                 "Examples:\n" +
-                "java - jar terracotta-parquet.jar -s terracotta://localhost:9410 -d DS1 -t LONG -o C:\\temp\n" +
-                "java - jar terracotta-parquet.jar -s terracotta://localhost:9410 -d DS1 -t LONG -o C:\\temp -fn InstantDateKey -ft LONG -flv 0 -fhv 20000000 -p\n" +
-                "java - jar terracotta-parquet.jar -s terracotta://localhost:9410 -d DS1 -t LONG -o C:\\temp -fn CustomIncrementorKey -ft DOUBLE -flv 0.0 -fhv 1000.0 -ms 256 -n \"PdfCell,BYTES\" -p\n\n" +
+                "java - jar terracotta-tcstore-exporter.jar -s terracotta://localhost:9410 -d DS1 -t LONG -o C:\\temp\n" +
+                "java - jar terracotta-tcstore-exporter.jar -s terracotta://localhost:9410 -d DS1 -t LONG -o C:\\temp -fn InstantDateKey -ft LONG -flv 0 -fhv 20000000 -p\n" +
+                "java - jar terracotta-tcstore-exporter.jar -s terracotta://localhost:9410 -d DS1 -t LONG -o C:\\temp -fn CustomIncrementorKey -ft DOUBLE -flv 0.0 -fhv 1000.0 -ms 256 -n \"PdfCell,BYTES\" -p\n\n" +
                 helpEntry(SERVER_URI, SERVER_URI_DESC, true) +
                 helpEntry(DATASET_NAME, DATASET_NAME_DESC, true) +
                 helpEntry(DATASET_TYPE, DATASET_TYPE_DESC, true) +

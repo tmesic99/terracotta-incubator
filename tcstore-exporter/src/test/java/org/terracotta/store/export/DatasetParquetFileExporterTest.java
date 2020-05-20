@@ -19,6 +19,7 @@ package org.terracotta.store.export;
 
 import com.terracottatech.store.Record;
 import com.terracottatech.store.Type;
+import com.terracottatech.store.definition.CellDefinition;
 import com.terracottatech.store.manager.DatasetManager;
 import org.junit.Test;
 
@@ -100,7 +101,7 @@ public class DatasetParquetFileExporterTest {
         ParquetOptions options = new ParquetOptions();
 
         // Range Filter
-        //options.setFilterCell("C0001", Type.LONG);;
+        //options.setFilterCell(CellDefinition.define("C0001", Type.LONG));
         //options.setDoNotAbortIfFilterCellMissing(true);
         //Double rangeLowValue = 1.0;
         //Double rangeHighValue = 10000.0;
