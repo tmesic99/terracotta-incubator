@@ -22,6 +22,7 @@ import com.terracottatech.store.definition.CellDefinition;
 
 import java.util.Collections;
 import java.util.HashMap;
+import java.util.List;
 import java.util.Map;
 
 /**
@@ -38,6 +39,8 @@ public class ParquetExportStats
     private long stringsTruncated;
     private long arraysNullified;
     private Map<CellDefinition<?>, Integer> schemaAbsentCellNoWriteCounts = new HashMap<>();
+    private List<String> filenames;
+    private List<String> filenamePaths;
 
     /**
      * @return the number of records that were completely written (all of the cells were accounted for in the output
@@ -131,5 +134,27 @@ public class ParquetExportStats
 
     protected void setExportSuccess(boolean exportStatus) {
         this.exportSuccess = exportStatus;
+    }
+
+    /**
+     * @return the name(s) of the generated parquet file(s).
+     */
+    public List<String> getFilenames() {
+        return filenames;
+    }
+
+    public void setFilenames(List<String> filenames) {
+        this.filenames = filenames;
+    }
+
+    /**
+     * @return the full path names of the generated parquet file(s).
+     */
+    public List<String> getFilenamePaths() {
+        return filenamePaths;
+    }
+
+    public void setFilenamePaths(List<String> filenamePaths) {
+        this.filenamePaths = filenamePaths;
     }
 }
