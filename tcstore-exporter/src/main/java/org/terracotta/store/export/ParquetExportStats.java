@@ -143,7 +143,7 @@ public class ParquetExportStats
         return filenames;
     }
 
-    public void setFilenames(List<String> filenames) {
+    protected void setFilenames(List<String> filenames) {
         this.filenames = filenames;
     }
 
@@ -154,7 +154,7 @@ public class ParquetExportStats
         return filenamePaths;
     }
 
-    public void setFilenamePaths(List<String> filenamePaths) {
+    protected void setFilenamePaths(List<String> filenamePaths) {
         this.filenamePaths = filenamePaths;
     }
 }
