@@ -63,17 +63,19 @@ public class DatasetParquetFileExporter
     private Type datasetType;
     private String outputFileFolder;
 
-    private List<String> crcFileNames;
     private Map<Schema, ParquetWriter<GenericData.Record>> schemaWriterMap;
+    private List<String> crcFileNames;
+    private List<String> filenames;
+    private List<String> filenamePaths;
 
     /**
      * Create a DatasetParquetFileExporter with the given settings.
      *
-     * @param dsManager an initialized DatasetManager from which to work
-     * @param datasetName the name of the Dataset from which to export records
-     * @param datasetType the key type of the Dataset from which to export records
+     * @param dsManager        an initialized DatasetManager from which to work
+     * @param datasetName      the name of the Dataset from which to export records
+     * @param datasetType      the key type of the Dataset from which to export records
      * @param outputFileFolder the name of the folder in which to output files
-     * @param options options to control aspects of the export processing
+     * @param options          options to control aspects of the export processing
      * @throws Exception
      * @see ParquetOptions
      */
@@ -103,8 +105,7 @@ public class DatasetParquetFileExporter
      * @return information about the outcome of the export operation
      * @see ParquetExportStats
      */
-    public ParquetExportStats exportDataset() throws StoreExportException
-    {
+    public ParquetExportStats exportDataset() throws StoreExportException {
         LOG.info("Exporting all dataset records");
         return export(null); // no filter
     }
@@ -115,8 +116,7 @@ public class DatasetParquetFileExporter
      * @return information about the outcome of the export operation
      * @see ParquetExportStats
      */
-    public ParquetExportStats exportDataset(Predicate<Record<?>> filterPredicate) throws StoreExportException
-    {
+    public ParquetExportStats exportDataset(Predicate<Record<?>> filterPredicate) throws StoreExportException {
         LOG.info("Exporting dataset records using custom filter");
         return export(filterPredicate);
     }
@@ -127,12 +127,12 @@ public class DatasetParquetFileExporter
      * the given range.
      *
      * @param highRangeValue include records with values less than this value in the predicate cell.
-     * @param lowRangeValue include records with values equal to or greater than this value in the predicate cell.
+     * @param lowRangeValue  include records with values equal to or greater than this value in the predicate cell.
      * @return information about the outcome of the export operation
      * @see ParquetOptions
      * @see ParquetExportStats
      */
-    public ParquetExportStats exportDataset(Number lowRangeValue, Number highRangeValue)  throws StoreExportException {
+    public ParquetExportStats exportDataset(Number lowRangeValue, Number highRangeValue) throws StoreExportException {
         // Supported behaviour includes::
         //   If filter cell has not been defined then abort or continue
         //   If filter cell has been defined but has an unsupported type then abort or continue
@@ -148,45 +148,37 @@ public class DatasetParquetFileExporter
 
         if (filterCellName.isEmpty() && filterCellType == null) {
             LOG.warn("No Range Filter has been configured.");
-        }
-        else if (!useFilterCell) {
+        } else if (!useFilterCell) {
             LOG.warn("Filter cell '" + filterCellName + "' of type '" + filterCellType + "' not found in dataset.");
-        }
-        else {
+        } else {
             // filter cell is loaded in the schema...
             if (filterCellType.equals(Type.LONG)) {
                 LongCellDefinition cell = CellDefinition.defineLong(filterCellName);
                 rangeFilter = (cell.value().isGreaterThanOrEqualTo(lowRangeValue.longValue()).and(cell.value().isLessThan(highRangeValue.longValue())));
-            }
-            else if (filterCellType.equals(Type.INT)) {
+            } else if (filterCellType.equals(Type.INT)) {
                 IntCellDefinition cell = CellDefinition.defineInt(filterCellName);
                 rangeFilter = (cell.value().isGreaterThanOrEqualTo(lowRangeValue.intValue()).and(cell.value().isLessThan(highRangeValue.intValue())));
-            }
-            else if (filterCellType.equals(Type.DOUBLE)) {
+            } else if (filterCellType.equals(Type.DOUBLE)) {
                 DoubleCellDefinition cell = CellDefinition.defineDouble(filterCellName);
                 rangeFilter = (cell.value().isGreaterThanOrEqualTo(lowRangeValue.doubleValue()).and(cell.value().isLessThan(highRangeValue.doubleValue())));
-            }
-            else {
+            } else {
                 LOG.warn("Unsupported cell type '" + filterCellType + "' for Range Filter.");
             }
         }
         if (useFilterCell) {
             LOG.info("Exporting dataset records with '" + filterCellName + "' >= " + lowRangeValue + " and < " + highRangeValue);
             stats = export(rangeFilter);
-        }
-        else if (options.getDoNotAbortIfFilterCellMissing()) {
+        } else if (options.getDoNotAbortIfFilterCellMissing()) {
             LOG.info("Abort override option has been set.  Exporting entire dataset to file.");
             stats = export(null);
-        }
-        else {
+        } else {
             LOG.warn("Aborting.  No records written.");
             stats.setExportSuccess(false);
         }
         return stats;
     }
 
-    private ParquetExportStats export(Predicate<Record<?>> filterPredicate) throws StoreExportException
-    {
+    private ParquetExportStats export(Predicate<Record<?>> filterPredicate) throws StoreExportException {
         ParquetExportStats stats = new ParquetExportStats();
 
         try (Dataset<?> dataset = dsManager.getDataset(datasetName, datasetType)) {
@@ -233,8 +225,7 @@ public class DatasetParquetFileExporter
 
                     Map<Schema, GenericData.Record> schemaRecordMap = new HashMap<>();
                     Map<ParquetWriter<GenericData.Record>, GenericData.Record> writerRecordMap = new HashMap<>();
-                    for (Map.Entry<Schema, ParquetWriter<GenericData.Record>> entry : schemaWriterMap.entrySet())
-                    {
+                    for (Map.Entry<Schema, ParquetWriter<GenericData.Record>> entry : schemaWriterMap.entrySet()) {
                         // Create a new record for every unique schema and associate (map) that record
                         // to the schema and to the dedicated writer created for that schema.
                         Schema schema = entry.getKey();
@@ -262,34 +253,28 @@ public class DatasetParquetFileExporter
                                 // written to every writer's record
                                 for (Map.Entry<Schema, GenericData.Record> entry : schemaRecordMap.entrySet())
                                     entry.getValue().put(fieldName, cell.value());
-                            }
-                            else {
+                            } else {
                                 // this cell can only belong to a single schema
                                 Schema s = schemas.getSchema(cellDef);
 
-                                if (cell.definition().type().equals(Type.STRING))
-                                {
-                                    String string = (String)cell.value();
+                                if (cell.definition().type().equals(Type.STRING)) {
+                                    String string = (String) cell.value();
                                     if (maxStringLength >= 0 && string.length() > maxStringLength) {
                                         string = string.substring(0, Math.max(0, maxStringLength - 1));
                                         stringsTruncated.incrementAndGet();
                                     }
                                     schemaRecordMap.get(s).put(fieldName, string);
-                                }
-                                else if (cell.definition().type().equals(Type.BYTES))
-                                {
-                                    byte[] array = (byte[])cell.value();
+                                } else if (cell.definition().type().equals(Type.BYTES)) {
+                                    byte[] array = (byte[]) cell.value();
                                     if (maxByteArraySize >= 0 && array.length > maxByteArraySize) {
                                         array = null;
                                         arraysNullified.incrementAndGet();
                                     }
                                     schemaRecordMap.get(s).put(fieldName, array);
-                                }
-                                else
+                                } else
                                     schemaRecordMap.get(s).put(fieldName, cell.value());
                             }
-                        }
-                        else {
+                        } else {
                             // This cell was not found in any one of the schemas.  This is likely due to having
                             // used too small a sample size for schema discovery resulting in this cell not having
                             // been identified in the sampled records.
@@ -301,8 +286,7 @@ public class DatasetParquetFileExporter
                     for (Map.Entry<ParquetWriter<GenericData.Record>, GenericData.Record> entry : writerRecordMap.entrySet()) {
                         try {
                             entry.getKey().write(entry.getValue());
-                        }
-                        catch (Exception ex) {
+                        } catch (Exception ex) {
                             fullRecordSuccess = false;
                             LOG.error("Exception writing record (key=" + r.getKey().toString() + "): " + ex.getMessage());
                         }
@@ -313,12 +297,11 @@ public class DatasetParquetFileExporter
                             fullRecordWrites.incrementAndGet();
                         else
                             partialRecordWrites.incrementAndGet();
-                    }
-                    else {
+                    } else {
                         failedRecordWrites.incrementAndGet();
                     }
 
-                    if(recordsProcessed.incrementAndGet() % statusCheckpoint == 0) {
+                    if (recordsProcessed.incrementAndGet() % statusCheckpoint == 0) {
                         LOG.info(String.format("%,d records processed", recordsProcessed.get()));
                     }
                 });
@@ -330,6 +313,8 @@ public class DatasetParquetFileExporter
                 stats.setFailedRecordWrites(failedRecordWrites.get());
                 stats.setStringsTruncated(stringsTruncated.get());
                 stats.setByteArraysNullified(arraysNullified.get());
+                stats.setFilenames(filenames);
+                stats.setFilenamePaths(filenamePaths);
 
                 LOG.info(String.format("%,d records processed.  Processing complete.", stats.getRecordsProcessed()));
                 LOG.info(String.format("%,d complete records written to parquet file", stats.getFullRecordWrites()));
@@ -344,25 +329,24 @@ public class DatasetParquetFileExporter
                 LOG.info(String.format("%,d string values were truncated (max character length = %,d)", stats.getStringsTruncated(), maxStringLength));
                 LOG.info(String.format("%,d large-size byte arrays were omitted (max array length = %,d)", stats.getByteArraysNullified(), maxByteArraySize));
             }
-        }
-        catch (Exception ex) {
+        } catch (Exception ex) {
             LOG.error("Exception exporting dataset: " + ex.getMessage());
             stats.setExportSuccess(false);
-        }
-        finally {
+        } finally {
             closeWriters();
             cleanup(); // deletes the autogenerated .crc files
         }
         return stats;
     }
 
-    private void initializeWriters() throws Exception
-    {
+    private void initializeWriters() throws Exception {
         // We have to create a writer for each defined schema.  There can be multiple
         // schemas because Dremio has a limit of 800 columns per table which translates to a
         // limit of 800 cells per dataset.  Anything more than that would be written to
         // one or more parallel parquet files (each with its own schema).
 
+        filenames = new ArrayList<>();
+        filenamePaths = new ArrayList<>();
         crcFileNames = new ArrayList<>();
         schemaWriterMap = new HashMap<>();
 
@@ -379,32 +363,34 @@ public class DatasetParquetFileExporter
                     index++;
                 }
                 String fileName = establishOutputFileName(dateFragment, fileNumber);
-                ParquetWriter<GenericData.Record> writer = initializeWriter(schema, fileName);
+                Path hadoopPath = new Path(this.outputFileFolder, fileName);
+                ParquetWriter<GenericData.Record> writer = initializeWriter(schema, hadoopPath);
 
                 crcFileNames.add(String.format(".%s.crc", fileName)); // for end of run cleanup
                 schemaWriterMap.put(schema, writer); // key map used during dataset processing
-            }
-            catch (Exception ex) {
+                filenames.add(fileName);
+                String filePath = (new File(this.outputFileFolder, fileName)).getCanonicalPath();
+                filenamePaths.add(filePath);
+                LOG.info("Initializing writer for: " + filePath);
+            } catch (Exception ex) {
                 LOG.info("Error encountered initializing Parquet Writers: " + ex.getMessage());
                 throw ex;
             }
         }
     }
 
-    private ParquetWriter<GenericData.Record> initializeWriter(Schema schema, String fileName) throws IOException
-    {
+    private ParquetWriter<GenericData.Record> initializeWriter(Schema schema, Path hadoopPath) throws IOException {
         ParquetWriter<GenericData.Record> writer;
         try {
-            Path parquetFilePath = new Path(this.outputFileFolder, fileName);
-            writer = AvroParquetWriter.<GenericData.Record>builder(parquetFilePath)
-                .withWriteMode(ParquetFileWriter.Mode.CREATE)
-                .withSchema(schema)
-                .withConf(getConfiguration())
-                .withCompressionCodec(options.getCompression())
-                .withPageSize(options.getPageSize()) //For compression
-                .withRowGroupSize(options.getRowGroupSize()) //For write buffering (Page size)
-                .withWriterVersion(ParquetProperties.WriterVersion.PARQUET_1_0) //PARQUET_2_0
-                .build();
+            writer = AvroParquetWriter.<GenericData.Record>builder(hadoopPath)
+                    .withWriteMode(ParquetFileWriter.Mode.CREATE)
+                    .withSchema(schema)
+                    .withConf(getConfiguration())
+                    .withCompressionCodec(options.getCompression())
+                    .withPageSize(options.getPageSize()) //For compression
+                    .withRowGroupSize(options.getRowGroupSize()) //For write buffering (Page size)
+                    .withWriterVersion(ParquetProperties.WriterVersion.PARQUET_1_0) //PARQUET_2_0
+                    .build();
         } catch (IOException ex) {
             LOG.error("Exception creating Parquet File Writer: " + ex.getMessage());
             throw ex;
@@ -412,20 +398,17 @@ public class DatasetParquetFileExporter
         return writer;
     }
 
-    private void closeWriters()
-    {
+    private void closeWriters() {
         schemaWriterMap.forEach((k, v) -> {
             try {
                 v.close();
-            }
-            catch (IOException ex) {
+            } catch (IOException ex) {
                 LOG.error("Exception closing the parquet writer: " + ex.getMessage());
             }
         });
     }
 
-    private Configuration getConfiguration()
-    {
+    private Configuration getConfiguration() {
         Configuration conf = new Configuration();
         return conf;
 
@@ -450,29 +433,22 @@ public class DatasetParquetFileExporter
         //https://hadoop.apache.org/docs/current/hadoop-azure-datalake/index.html
     }
 
-    private String establishOutputFileName(String dateFragment, String fileNumber)
-    {
+    private String establishOutputFileName(String dateFragment, String fileNumber) {
         if (fileNumber.isEmpty()) {
             return String.format("%s_%s.parquet", this.datasetName, dateFragment);
-        }
-        else {
+        } else {
             return String.format("%s_%s_%s.parquet", this.datasetName, dateFragment, fileNumber);
         }
     }
 
-    private void cleanup()
-    {
+    private void cleanup() {
         LOG.debug("Cleanup");
-        for (String crcFile : crcFileNames)
-        {
-            try
-            {
+        for (String crcFile : crcFileNames) {
+            try {
                 File file = new File(this.outputFileFolder, crcFile);
-                if(!file.delete())
+                if (!file.delete())
                     LOG.warn("failed to delete .crc file");
-            }
-            catch (Exception ex)
-            {
+            } catch (Exception ex) {
                 LOG.warn("Exception deleting .crc file: " + ex.getMessage());
             }
         }

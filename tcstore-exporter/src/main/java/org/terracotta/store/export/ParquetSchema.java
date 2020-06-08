@@ -85,6 +85,7 @@ public class ParquetSchema {
                     .limit(options.getSchemaSampleSize())
                     .flatMap(Record::stream)
                     .map(Cell::definition)
+                    //.filter(c -> getAvroType(c.type()) != null)
                     .collect(Collectors.toSet());
             }
             // We have a unique list of all cells present in the dataset (for the given record sample)
@@ -177,16 +178,16 @@ public class ParquetSchema {
         sb.append(" \"name\": \"" + datasetName + "\",\n");
         sb.append(" \"fields\": [ \n");
         for (CellDefinition<?> cell : uniqueCells) {
-
             String fieldName = getUniqueFieldName(cell, uniqueCells);
-            uniqueFieldNames.put(cell, fieldName); // used during file write
-
-            sb.append(" { \"name\": \"" + fieldName + "\", \"type\": ");
-            if (fieldName.equals(REC_KEY)) {
-                sb.append("\"" + getAvroType(cell.type()) + "\" },\n");  // nulls not allowed
-            }
-            else {
-                sb.append("[\"" + getAvroType(cell.type()) + "\", \"null\"] },\n"); // nulls allowed
+            String avroType = getAvroType(cell.type());
+            if (avroType != null && fieldName != null && !fieldName.isEmpty()) {
+                uniqueFieldNames.put(cell, fieldName); // referenced during file write
+                sb.append(" { \"name\": \"" + fieldName + "\", \"type\": ");
+                if (fieldName.equals(REC_KEY)) {
+                    sb.append("\"" + avroType + "\" },\n");  // nulls not allowed
+                } else {
+                    sb.append("[\"" + avroType + "\", \"null\"] },\n"); // nulls allowed
+                }
             }
         }
         String sbString = sb.toString();
@@ -231,6 +232,10 @@ public class ParquetSchema {
                 return "string";
             case BYTES:
                 return "bytes";
+            //case LIST:
+            //    return null;  //'map' not supported yet
+            //case MAP:
+            //    return null; // 'array' not supported yet
             default:
                 return null;
         }
@@ -253,6 +258,10 @@ public class ParquetSchema {
                 return "STRING";
             case BYTES:
                 return "BYTES";
+            //case LIST:
+            //    return ""; //"LIST" not supported yet
+            //case MAP:
+            //    return ""; //"MAP" not supported yet
             default:
                 return "";
         }
