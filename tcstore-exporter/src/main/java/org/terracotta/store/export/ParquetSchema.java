@@ -37,6 +37,8 @@ public class ParquetSchema {
 
     private static final Logger LOG = LoggerFactory.getLogger(ParquetSchema.class);
     public static final String REC_KEY = "RecKey";
+    public static final String STORE_LIST_TYPE = "Type<StoreList>";
+    public static final String STORE_MAP_TYPE = "Type<StoreMap>";
 
     private DatasetManager dsManager;
     private ParquetOptions options;
@@ -48,7 +50,7 @@ public class ParquetSchema {
     private Map<CellDefinition<?>, String> uniqueFieldNames;
     private Map<CellDefinition<?>, Schema> cellDefinitionSchemaMap;
 
-    ParquetSchema(DatasetManager dsManager, String datasetName, Type datasetType, ParquetOptions options) throws StoreExportException
+    ParquetSchema(DatasetManager dsManager, String datasetName, Type<?> datasetType, ParquetOptions options) throws StoreExportException
     {
         this.dsManager = requireNonNull(dsManager);
         this.options = requireNonNull(options);
@@ -85,7 +87,7 @@ public class ParquetSchema {
                     .limit(options.getSchemaSampleSize())
                     .flatMap(Record::stream)
                     .map(Cell::definition)
-                    //.filter(c -> getAvroType(c.type()) != null)
+                    .filter(c -> getAvroType(c.type()) != null)
                     .collect(Collectors.toSet());
             }
             // We have a unique list of all cells present in the dataset (for the given record sample)
@@ -215,7 +217,7 @@ public class ParquetSchema {
         return fieldName;
     }
 
-    private String getAvroType(Type type)
+    private String getAvroType(Type<?> type)
     {
         switch (type.asEnum()) {
             case BOOL:
@@ -233,15 +235,15 @@ public class ParquetSchema {
             case BYTES:
                 return "bytes";
             //case LIST:
-            //    return null;  //'map' not supported yet
+            //    return null;  // map cells in parquet not yet supported
             //case MAP:
-            //    return null; // 'array' not supported yet
+            //    return null; // list cells in parquet not yet supported
             default:
-                return null;
+                return null; // maps and lists will be caught here
         }
     }
 
-    public String getTcType(Type type)
+    public String getTcType(Type<?> type)
     {
         switch (type.asEnum()) {
             case BOOL:
@@ -258,12 +260,15 @@ public class ParquetSchema {
                 return "STRING";
             case BYTES:
                 return "BYTES";
-            //case LIST:
-            //    return ""; //"LIST" not supported yet
-            //case MAP:
-            //    return ""; //"MAP" not supported yet
-            default:
-                return "";
+            default: {
+                String t = type.toString();
+                if (t.equals(STORE_LIST_TYPE))
+                    return "LIST";
+                else if (t.equals(STORE_MAP_TYPE))
+                    return "MAP";
+                else
+                    return "";
+            }
         }
     }
 

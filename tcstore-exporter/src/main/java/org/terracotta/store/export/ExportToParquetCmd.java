@@ -49,7 +49,7 @@ public class ExportToParquetCmd
 
             String uri = cmd.getServerUri();
             String datasetName = cmd.getDatasetName();
-            Type datasetType = cmd.getType(cmd.getDatasetType());
+            Type<?> datasetType = cmd.getType(cmd.getDatasetType());
             String outputFileFolder = cmd.getOutput();
 
             ParquetOptions options = new ParquetOptions();
