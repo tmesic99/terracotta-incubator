@@ -34,6 +34,7 @@ public class ParquetExportStats
     private boolean exportSuccess = false;
     private long fullRecordWrites;
     private long partialRecordWrites;
+    private long entireRecordsNotWritten;
     private long failedRecordWrites;
     private long recordsProcessed;
     private long stringsTruncated;
@@ -67,7 +68,17 @@ public class ParquetExportStats
     }
 
     /**
-     * @return the number of records that were not written to the output file due to error
+     * @return the number of records that were entirely not written to the output file (all of the cells were NOT accounted for in the output
+     * schema)
+     */
+    public long getEntireRecordsNotWritten() {
+        return entireRecordsNotWritten;
+    }
+
+    protected void setEntireRecordsNotWritten(long entireRecordsNotWritten) { this.entireRecordsNotWritten = entireRecordsNotWritten; }
+
+    /**
+     * @return the number of records that were not written to the output file due to an error
      */
     public long getFailedRecordWrites() {
         return failedRecordWrites;

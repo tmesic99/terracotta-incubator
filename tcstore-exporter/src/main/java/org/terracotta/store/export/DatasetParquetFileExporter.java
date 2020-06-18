@@ -196,8 +196,9 @@ public class DatasetParquetFileExporter
                         datasetName, outputFileFolder));
 
                 // For logging progress and final results
-                AtomicLong fullRecordWrites = new AtomicLong(0L);
-                AtomicLong partialRecordWrites = new AtomicLong(0L);
+                AtomicLong fullRecordsWritten = new AtomicLong(0L);
+                AtomicLong partialRecordsWritten = new AtomicLong(0L);
+                AtomicLong fullRecordsNotWritten = new AtomicLong(0L);
                 AtomicLong failedRecordWrites = new AtomicLong(0L);
                 AtomicLong recordsProcessed = new AtomicLong(0L);
                 AtomicLong stringsTruncated = new AtomicLong(0L);
@@ -235,8 +236,9 @@ public class DatasetParquetFileExporter
                         writerRecordMap.put(entry.getValue(), pqRecord);
                     }
 
-                    boolean fullRecordWrite = true;
-                    boolean fullRecordSuccess = true;
+                    boolean fullRecordWritten = true;
+                    boolean entireRecordNotWritten = true;
+                    boolean writeRecordSuccess = true;
                     boolean filterCellFound = false;
 
                     for (Cell<?> cell : r) {
@@ -274,11 +276,12 @@ public class DatasetParquetFileExporter
                                 } else
                                     schemaRecordMap.get(s).put(fieldName, cell.value());
                             }
+                            entireRecordNotWritten = false;
                         } else {
                             // This cell was not found in any one of the schemas.  This is likely due to having
                             // used too small a sample size for schema discovery resulting in this cell not having
                             // been identified in the sampled records.
-                            fullRecordWrite = false;
+                            fullRecordWritten = false;
                             schemaAbsentCells.merge(cellDef, 1, Integer::sum);
                         }
                     }
@@ -287,16 +290,18 @@ public class DatasetParquetFileExporter
                         try {
                             entry.getKey().write(entry.getValue());
                         } catch (Exception ex) {
-                            fullRecordSuccess = false;
+                            writeRecordSuccess = false;
                             LOG.error("Exception writing record (key=" + r.getKey().toString() + "): " + ex.getMessage());
                         }
                     }
-                    // Results for writing this single record across multiple files
-                    if (fullRecordSuccess) {
-                        if (fullRecordWrite)
-                            fullRecordWrites.incrementAndGet();
+                    // Results for writing this single record across 1 or more files
+                    if (writeRecordSuccess) {
+                        if (fullRecordWritten)
+                            fullRecordsWritten.incrementAndGet();
+                        else if (entireRecordNotWritten)
+                            fullRecordsNotWritten.incrementAndGet();
                         else
-                            partialRecordWrites.incrementAndGet();
+                            partialRecordsWritten.incrementAndGet();
                     } else {
                         failedRecordWrites.incrementAndGet();
                     }
@@ -308,8 +313,9 @@ public class DatasetParquetFileExporter
 
                 stats.setExportSuccess(true);
                 stats.setRecordsProcessed(recordsProcessed.get());
-                stats.setFullRecordWrites(fullRecordWrites.get());
-                stats.setPartialRecordWrites(partialRecordWrites.get());
+                stats.setFullRecordWrites(fullRecordsWritten.get());
+                stats.setPartialRecordWrites(partialRecordsWritten.get());
+                stats.setEntireRecordsNotWritten(fullRecordsNotWritten.get());
                 stats.setFailedRecordWrites(failedRecordWrites.get());
                 stats.setStringsTruncated(stringsTruncated.get());
                 stats.setByteArraysNullified(arraysNullified.get());
@@ -319,6 +325,7 @@ public class DatasetParquetFileExporter
                 LOG.info(String.format("%,d records processed.  Processing complete.", stats.getRecordsProcessed()));
                 LOG.info(String.format("%,d complete records written to parquet file", stats.getFullRecordWrites()));
                 LOG.info(String.format("%,d partial records written to parquet file", stats.getPartialRecordWrites()));
+                LOG.info(String.format("%,d entire records NOT written to parquet file", stats.getEntireRecordsNotWritten()));
                 LOG.info(String.format("%,d records failed writing to parquet file", stats.getFailedRecordWrites()));
                 for (Map.Entry<CellDefinition<?>, Integer> entry : schemaAbsentCells.entrySet()) {
                     String message = String.format("%,d occurrences of cell '%s (%s)' not written to parquet file (cell definition missing from schema).",
