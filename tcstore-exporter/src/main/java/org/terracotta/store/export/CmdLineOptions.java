@@ -345,7 +345,7 @@ public class CmdLineOptions
             if (filterCellName.isEmpty())
                 validationErrors.append("Filter Cell Name (" + FILTER_CELL_NAME + ") value not specified\n");
 
-            Type type = getType(filterCellType);
+            Type<?> type = getType(filterCellType);
             if (type == null)
                 validationErrors.append("Filter Cell Type (" + FILTER_CELL_TYPE + ") value not specified or is invalid\n");
             else {
@@ -372,7 +372,7 @@ public class CmdLineOptions
                     validationErrors.append("Blank cell name found in Exportable Cell List (" + EXPORTABLE_CELLS + ")\n");
                 if (++i < count) {
                     String cellType = whiteListCellsNamesTypes.get(i).trim();
-                    Type type = getType(cellType);
+                    Type<?> type = getType(cellType);
                     if (type == null)
                         validationErrors.append("Exportable Cell Type (" + EXPORTABLE_CELLS + ") '" + cellType + "' not specified or is invalid\n");
                 }
@@ -391,7 +391,7 @@ public class CmdLineOptions
                     validationErrors.append("Blank cell name found in Non-Exportable Cell List (" + EXPORTABLE_CELLS + ")\n");
                 if (++i < count) {
                     String cellType = blackListCellsNamesTypes.get(i).trim();
-                    Type type = getType(cellType);
+                    Type<?> type = getType(cellType);
                     if (type == null)
                         validationErrors.append("Non-Exportable Cell Type (" + NONEXPORTABLE_CELLS + ") '" + cellType + "' not specified or is invalid\n");
                 }
