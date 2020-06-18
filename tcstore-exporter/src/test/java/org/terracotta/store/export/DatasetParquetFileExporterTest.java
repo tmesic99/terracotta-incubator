@@ -19,7 +19,7 @@ package org.terracotta.store.export;
 
 import com.terracottatech.store.Record;
 import com.terracottatech.store.Type;
-import com.terracottatech.store.definition.CellDefinition;
+import com.terracottatech.store.definition.*;
 import com.terracottatech.store.manager.DatasetManager;
 import org.junit.Test;
 
@@ -44,15 +44,15 @@ public class DatasetParquetFileExporterTest {
                 "-t", "LONG",
                 "-o", "C:\\temp",
 
-                "-ss", "10",
+                "-ss", "1",
                 "-a",
-                "-fn", "C0001",
-                "-ft", "LONG",
-                "-flv", "1",
-                "-fhv", "10",
-                "-ia",
+                //"-fn", "C0001",
+                //"-ft", "LONG",
+                //"-flv", "1",
+                //"-fhv", "10",
+                //"-ia",
 
-                //"-mc", "4",
+                //"-mc", "9",
                 //"-mcia",
                 //"-mcmf",
 
@@ -95,7 +95,7 @@ public class DatasetParquetFileExporterTest {
     {
         String uri = "terracotta://localhost:9410";
         String datasetName = "DS1";
-        Type datasetType = Type.LONG;
+        Type<?> datasetType = Type.LONG;
         String outputFileFolder = "C:\\temp";
 
         ParquetOptions options = new ParquetOptions();
@@ -151,7 +151,7 @@ public class DatasetParquetFileExporterTest {
     {
         String uri = "terracotta://localhost:9410";
         String datasetName = "DS1";
-        Type datasetType = Type.LONG;
+        Type<?> datasetType = Type.LONG;
         String outputFileFolder = "C:\\temp";
 
         ParquetOptions options = new ParquetOptions();
@@ -161,6 +161,38 @@ public class DatasetParquetFileExporterTest {
             // custom filter example (e.g. only write records with even numbered keys)
             Predicate<Record<?>> filter = (r -> (((Long)r.getKey()) % 2) == 0); //DS1 dataset is type long
             exporter.exportDataset(filter);
+        }
+        catch (Exception ex)
+        {
+        }
+    }
+
+    @Test
+    public void Api_Schema_Filter_Test()
+    {
+        String uri = "terracotta://localhost:9410";
+        String datasetName = "DS1";
+        Type<?> datasetType = Type.LONG;
+        String outputFileFolder = "C:\\temp";
+
+        ParquetOptions options = new ParquetOptions();
+
+        // Schema-Sampling Filter Examples
+
+        //BoolCellDefinition cell = CellDefinition.defineBool("C0010");
+        //options.setSchemaSampleFilter(cell.value().is(true));
+
+        //LongCellDefinition cell = CellDefinition.defineLong("C0001");
+        //options.setSchemaSampleFilter(cell.value().isGreaterThanOrEqualTo(400L));
+
+        LongCellDefinition c1 = CellDefinition.defineLong("C0001");
+        BoolCellDefinition c2 = CellDefinition.defineBool("C0020");
+        StringCellDefinition c3 = CellDefinition.defineString("C0015");
+        options.setSchemaSampleFilter(c1.exists().and(c2.exists().and(c3.exists())));
+
+        try (DatasetManager dsManager = DatasetManager.clustered((new URI(uri))).build()) {
+            DatasetParquetFileExporter exporter = new DatasetParquetFileExporter(dsManager, datasetName, datasetType, outputFileFolder, options);
+            exporter.exportDataset();
         }
         catch (Exception ex)
         {
