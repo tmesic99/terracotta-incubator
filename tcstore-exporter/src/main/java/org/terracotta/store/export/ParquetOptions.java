@@ -17,6 +17,7 @@
  */
 package org.terracotta.store.export;
 
+import com.terracottatech.store.Record;
 import com.terracottatech.store.Type;
 import com.terracottatech.store.definition.CellDefinition;
 import org.apache.parquet.hadoop.metadata.CompressionCodecName;
@@ -25,6 +26,7 @@ import org.slf4j.LoggerFactory;
 
 import java.util.HashSet;
 import java.util.Set;
+import java.util.function.Predicate;
 
 /**
  * Options for the export of Dataset contents to a parquet file.
@@ -69,6 +71,7 @@ public class ParquetOptions {
     private Set<CellDefinition<?>> blackListCells = new HashSet<>();
     private Integer maxStringLength = -1;
     private Integer maxByteArraySize = -1;
+    private Predicate<Record<?>> schemaSampleFilter;
 
     /**
      * Add a cell to the "whitelist" of cells that should be included in the output
@@ -272,6 +275,17 @@ public class ParquetOptions {
      */
     public void setMaxByteArraySize(Integer maxByteArraySize) {
         this.maxByteArraySize = maxByteArraySize;
+    }
+
+    public Predicate<Record<?>> getSchemaSampleFilter() {
+        return schemaSampleFilter;
+    }
+
+    /**
+     * @param schemaSampleFilter construct the parquet schema based on cells contained in records that match the supplied predicate
+     */
+    public void setSchemaSampleFilter(Predicate<Record<?>> schemaSampleFilter) {
+        this.schemaSampleFilter = schemaSampleFilter;
     }
 }
 

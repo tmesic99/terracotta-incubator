@@ -29,6 +29,7 @@ import org.slf4j.Logger;
 import org.slf4j.LoggerFactory;
 
 import java.util.*;
+import java.util.function.Predicate;
 import java.util.stream.Collectors;
 
 import static java.util.Objects.requireNonNull;
@@ -83,7 +84,12 @@ public class ParquetSchema {
         try (Dataset<?> dataset = dsManager.getDataset(this.datasetName, this.datasetType)) {
             Set<CellDefinition<?>> uniqueCells;
             try (RecordStream<?> records = dataset.reader().records()) {
-                uniqueCells = records
+                RecordStream<?> working = records;
+                Predicate<Record<?>> schemaSampleFilter = options.getSchemaSampleFilter();
+                if (schemaSampleFilter != null) {
+                    working = working.filter(schemaSampleFilter);
+                }
+                uniqueCells = working
                     .limit(options.getSchemaSampleSize())
                     .flatMap(Record::stream)
                     .map(Cell::definition)
