@@ -71,7 +71,7 @@ public class ParquetSchema {
     private void initialize() throws StoreExportException {
         // Schema initialization must be completed before any dataset export can happen.
         // - sample the target dataset for all unique cells
-        // - modify the uniqe cells based on whitelisted and blacklisted cells
+        // - modify the uniqe cells based on the included and excluded cells
         // - determine how many schemas must be created based on configured 'max columns' option
         // - handle aborting the initialization based on configured 'ignore abort' option
         // - create an Avro schema per set of partitioned dataset cells
@@ -97,17 +97,17 @@ public class ParquetSchema {
                     .collect(Collectors.toSet());
             }
             // We have a unique list of all cells present in the dataset (for the given record sample)
-            // Modify this list as required based on the specified allowed/disallowed (whitelist/blacklist) cells
+            // Modify this list as required based on the specified included/excluded cells
 
-            Set<CellDefinition<?>> whiteList = options.getWhiteListCells();
-            Set<CellDefinition<?>> blackList = options.getBlackListCells();
-            if (whiteList.size() > 0) {
-                LOG.info("Constraining the schema to ONLY include 'whitelisted' cells:\n" + whiteList.toString());
-                uniqueCells.retainAll(whiteList);
+            Set<CellDefinition<?>> includeList = options.getIncludeCells();
+            Set<CellDefinition<?>> excludeList = options.getExcludeCells();
+            if (includeList.size() > 0) {
+                LOG.info("Constraining the schema to ONLY contain 'include listed' cells:\n" + includeList.toString());
+                uniqueCells.retainAll(includeList);
             }
-            else if (blackList.size() > 0) {
-                LOG.info("Restricting 'blacklisted' cells from appearing in the schema:\n" + blackList.toString());
-                uniqueCells.removeAll(blackList);
+            else if (excludeList.size() > 0) {
+                LOG.info("Restricting 'exclude listed' cells from appearing in the schema:\n" + excludeList.toString());
+                uniqueCells.removeAll(excludeList);
             }
             // Does the specified filter cell exist in this dataset
             usingFilterCell = uniqueCells.contains(options.getFilterCell());

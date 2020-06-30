@@ -67,36 +67,36 @@ public class ParquetOptions {
     private Boolean maxOutputColumnsUseMultiFile = false;
     private Boolean logStreamPlan = false;
     private CellDefinition<?> filterCell;
-    private Set<CellDefinition<?>> whiteListCells = new HashSet<>();
-    private Set<CellDefinition<?>> blackListCells = new HashSet<>();
+    private Set<CellDefinition<?>> includeCells = new HashSet<>();
+    private Set<CellDefinition<?>> excludeCells = new HashSet<>();
     private Integer maxStringLength = -1;
     private Integer maxByteArraySize = -1;
     private Predicate<Record<?>> schemaSampleFilter;
 
     /**
-     * Add a cell to the "whitelist" of cells that should be included in the output
+     * Add a cell to the "include list" of cells that should be included in the output
      *
-     * If there is no whitelist or blacklist then all cells will be candidates for output
+     * If there is no 'include list' or 'exclude list' then all cells will be candidates for output
      *
-     * @param cellDef the whitelisted cell definition
-     * @see #addBlackListCellDefinition(CellDefinition)
+     * @param cellDef the included cell's cell definition
+     * @see #addExcludeCellDefinition(CellDefinition)
      */
-    public void addWhiteListCellDefinition(CellDefinition<?> cellDef) {
-        whiteListCells.add(cellDef);
+    public void addIncludeCellDefinition(CellDefinition<?> cellDef) {
+        includeCells.add(cellDef);
     }
 
     /**
-     * Add a cell to the "blacklist" of cells that should be excluded from the output
+     * Add a cell to the 'exclude list' of cells that should be excluded from the output
      *
-     * If a whitelist is used, a blacklist will be ignored.
+     * If an 'include list' is used, an 'exclude list' will be ignored.
      *
-     * If there is no whitelist or blacklist then all cells will be candidates for output
+     * If there is no 'include list' or 'exclude list' then all cells will be candidates for output
      *
-     * @param cellDef the blacklisted cell definition
-     * @see #addWhiteListCellDefinition(CellDefinition)
+     * @param cellDef the excluded cell's cell definition
+     * @see #addIncludeCellDefinition(CellDefinition)
      */
-    public void addBlackListCellDefinition(CellDefinition<?> cellDef) {
-        blackListCells.add(cellDef);
+    public void addExcludeCellDefinition(CellDefinition<?> cellDef) {
+        excludeCells.add(cellDef);
     }
 
     /**
@@ -247,12 +247,12 @@ public class ParquetOptions {
         this.logStreamPlan = logStreamPlan;
     }
 
-    public Set<CellDefinition<?>> getWhiteListCells() {
-        return whiteListCells;
+    public Set<CellDefinition<?>> getIncludeCells() {
+        return includeCells;
     }
 
-    public Set<CellDefinition<?>> getBlackListCells() {
-        return blackListCells;
+    public Set<CellDefinition<?>> getExcludeCells() {
+        return excludeCells;
     }
 
     public Integer getMaxStringLength() {

@@ -56,8 +56,8 @@ public class DatasetParquetFileExporterTest {
                 //"-mcia",
                 //"-mcmf",
 
-                //"-e", "C0001,LONG, C0002,DOUBLE, C0003,BOOL",
-                //"-n", "C0001,LONG, C0003,DOUBLE, C0003,BOOL",
+                "-i", "C0001,LONG, C0002,INT, C0003,BOOL",
+                //"-e", "C0001,LONG, C0003,DOUBLE, C0003,BOOL",
                 //"-ms", "0",
                 //"-mb", "0",
 
@@ -80,8 +80,8 @@ public class DatasetParquetFileExporterTest {
                 "-flv", "-10xxxx",
                 "-fhv", "2000000000xxxxx",
                 "-mc", "2",
-                "-e", "C1,LONGzz, C2,DOUBLEzz, C3,BOOLzz",
-                "-n", "C41,,,,LONG",
+                "-i", "C1,LONGzz, C2,DOUBLEzz, C3,BOOLzz",
+                "-e", "C41,,,,LONG",
                 "-ms", "256xxx",
                 "-mb", "14000xxx",
                 "xxxx",
@@ -115,17 +115,17 @@ public class DatasetParquetFileExporterTest {
         //options.setMaxOutputColumnsNoAbort(true); //default == false --> abort if max columns exist
         //options.setMaxOutputColumnsUseMultiFile(true); // default == false, if 'doNotAbort', use a single file
 
-        // Include/Exclude cells and large data (i.e. string/byte arrays)
+        // Caps on size of cell data (i.e. Value) (i.e. string/byte arrays)
         //options.setMaxStringLength(256); //default == -1 --> no limit
         //options.setMaxByteArraySize(1024*4); // default == -1 --> no limit
 
-        // Cell Whitelisting - only include these cells in the schema/parquet file
-        //options.addWhiteListCellDefinition(CellDefinition.define("C0001", Type.LONG));
-        //options.addWhiteListCellDefinition(CellDefinition.define("C0004", Type.BOOL));
+        // Cell Include-listing - only include these cells in the schema/parquet file
+        //options.addIncludeCellDefinition(CellDefinition.define("C0001", Type.LONG));
+        //options.addIncludeCellDefinition(CellDefinition.define("C0004", Type.BOOL));
 
-        // Cell Blacklisting - exclude cells from the schema/parquet file (if no whitelisting defined)
-        //options.addBlackListCellDefinition(CellDefinition.define("C0001",  Type.LONG));
-        //options.addBlackListCellDefinition(CellDefinition.define("PdfCell",  Type.BYTES));
+        // Cell Exclude-listing - exclude cells from the schema/parquet file (if no whitelisting defined)
+        //options.addExcludeCellDefinition(CellDefinition.define("C0001",  Type.LONG));
+        //options.addExcludeCellDefinition(CellDefinition.define("PdfCell",  Type.BYTES));
 
         options.setLogStreamPlan(true);
 
@@ -167,7 +167,7 @@ public class DatasetParquetFileExporterTest {
         }
     }
 
-    @Test
+    //@Test
     public void Api_Schema_Filter_Test()
     {
         String uri = "terracotta://localhost:9410";

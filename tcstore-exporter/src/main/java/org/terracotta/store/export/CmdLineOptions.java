@@ -74,10 +74,10 @@ public class CmdLineOptions
     private final static String LOG_STREAM_PLAN = "-p";
     private final static String LOG_STREAM_PLAN_DESC = "Log the Details of the Stream Plan";
 
-    private final static String EXPORTABLE_CELLS = "-e";
-    private final static String EXPORTABLE_CELLS_DESC = "Exportable Cells - a comma-separated list of cell definitions as <cellname, celltype> to be exported";
-    private final static String NONEXPORTABLE_CELLS = "-n";
-    private final static String NONEXPORTABLE_CELLS_DESC = "Non-Exportable Cells - a comma-separated list of cell definitions as <cellname, celltype> to be blocked from export";
+    private final static String INCLUDE_CELLS = "-i";
+    private final static String INCLUDE_CELLS_DESC = "Include Cells - a comma-separated list of cell definitions as <cellname, celltype> to be included in the export.  Only these cells will be exported.  All other cell types will be excluded.";
+    private final static String EXCLUDE_CELLS = "-e";
+    private final static String EXCLUDE_CELLS_DESC = "Exclude Cells - a comma-separated list of cell definitions as <cellname, celltype> to be exlcuded from the export.  This list is ignored if Include List (-i) is specified";
     private final static String MAX_STRING_LENGTH = "-ms";
     private final static String MAX_STRING_LENGTH_DESC = "For string values, the Maximum String Length in number of characters that will be exported, truncated otherwise (default is no strings are truncated)";
     private final static String MAX_BYTE_COUNT = "-mb";
@@ -104,8 +104,8 @@ public class CmdLineOptions
     private Boolean maxOutputColumnsNoAbort = false;
     private Boolean maxOutputColumnsUseMultiFile = false;
     private Boolean logStreamPlan = false;
-    private List<String> whiteListCellsNamesTypes = new ArrayList<>();
-    private List<String> blackListCellsNamesTypes = new ArrayList<>();
+    private List<String> includeCellsNamesTypes = new ArrayList<>();
+    private List<String> excludeCellsNamesTypes = new ArrayList<>();
     private Integer maxStringLength = -1;
     private Integer maxByteArraySize = -1;
 
@@ -266,27 +266,27 @@ public class CmdLineOptions
                         LOG.info(String.format(format, arg, value));
                         break;
                     }
-                    case EXPORTABLE_CELLS: {
+                    case INCLUDE_CELLS: {
                         String value = "";
                         if (++i < count) {
                             value = args[i];
                             try {
-                                whiteListCellsNamesTypes = new ArrayList<>(Arrays.asList(value.split(",")));
+                                includeCellsNamesTypes = new ArrayList<>(Arrays.asList(value.split(",")));
                             } catch (Exception ex) {
-                                validationErrors.append("Bad format for Exportable Cells list (" + EXPORTABLE_CELLS + ")\n");
+                                validationErrors.append("Bad format for Include Cells list (" + INCLUDE_CELLS + ")\n");
                             }
                         }
                         LOG.info(String.format(format, arg, value));
                         break;
                     }
-                    case NONEXPORTABLE_CELLS: {
+                    case EXCLUDE_CELLS: {
                         String value = "";
                         if (++i < count) {
                             value = args[i];
                             try {
-                                blackListCellsNamesTypes = new ArrayList<>(Arrays.asList(value.split(",")));
+                                excludeCellsNamesTypes = new ArrayList<>(Arrays.asList(value.split(",")));
                             } catch (Exception ex) {
-                                validationErrors.append("Bad format for Non-Exportable Cells list (" + NONEXPORTABLE_CELLS + ")\n");
+                                validationErrors.append("Bad format for Exclude Cells list (" + EXCLUDE_CELLS + ")\n");
                             }
                         }
                         LOG.info(String.format(format, arg, value));
@@ -361,39 +361,39 @@ public class CmdLineOptions
                 filterHighValue <= filterLowValue)
                 validationErrors.append("High Filter Value (" + HI_FILTER_VALUE + ") must be greater than the Low Filter Value (" + LO_FILTER_VALUE + ")\n");
         }
-        if (whiteListCellsNamesTypes.size() > 0)
+        if (includeCellsNamesTypes.size() > 0)
         {
-            Integer count = whiteListCellsNamesTypes.size();
+            Integer count = includeCellsNamesTypes.size();
             if (count %2 > 0)
-                validationErrors.append("Incorrect number of entries in the Exportable Cell List (" + EXPORTABLE_CELLS + ").  Cells must be specified as comma-separated <name>,<type> pairs.\n");
+                validationErrors.append("Incorrect number of entries in the Included Cell List (" + INCLUDE_CELLS + ").  Cells must be specified as comma-separated <name>,<type> pairs.\n");
             for (int i = 0; i < count; i++) {
-                String cellName = whiteListCellsNamesTypes.get(i).trim();
+                String cellName = includeCellsNamesTypes.get(i).trim();
                 if (cellName.isEmpty())
-                    validationErrors.append("Blank cell name found in Exportable Cell List (" + EXPORTABLE_CELLS + ")\n");
+                    validationErrors.append("Blank cell name found in the Included Cell List (" + INCLUDE_CELLS + ")\n");
                 if (++i < count) {
-                    String cellType = whiteListCellsNamesTypes.get(i).trim();
+                    String cellType = includeCellsNamesTypes.get(i).trim();
                     Type<?> type = getType(cellType);
                     if (type == null)
-                        validationErrors.append("Exportable Cell Type (" + EXPORTABLE_CELLS + ") '" + cellType + "' not specified or is invalid\n");
+                        validationErrors.append("Included Cell Type (" + INCLUDE_CELLS + ") '" + cellType + "' not specified or is invalid\n");
                 }
             }
         }
-        if (blackListCellsNamesTypes.size() > 0)
+        if (excludeCellsNamesTypes.size() > 0)
         {
-            if (whiteListCellsNamesTypes != null)
-                LOG.warn("Non-Exportable Cell list will be ignored because Exportable Cell list was specifed");
-            int count = blackListCellsNamesTypes.size();
+            if (includeCellsNamesTypes.size() > 0)
+                LOG.warn("Exclude Cell list will be ignored because Include Cell list was specifed");
+            int count = excludeCellsNamesTypes.size();
             if (count %2 > 0)
-                validationErrors.append("Incorrect number of entries in the Non-Exportable Cell List (" + NONEXPORTABLE_CELLS + ").  Cells must be specified as comma-separated <name>,<type> pairs.\n");
+                validationErrors.append("Incorrect number of entries in the Excluded Cell List (" + EXCLUDE_CELLS + ").  Cells must be specified as comma-separated <name>,<type> pairs.\n");
             for (int i = 0; i < count; i++) {
-                String cellName = blackListCellsNamesTypes.get(i).trim();
+                String cellName = excludeCellsNamesTypes.get(i).trim();
                 if (cellName.isEmpty())
-                    validationErrors.append("Blank cell name found in Non-Exportable Cell List (" + EXPORTABLE_CELLS + ")\n");
+                    validationErrors.append("Blank cell name found in the Excluded Cell List (" + EXCLUDE_CELLS + ")\n");
                 if (++i < count) {
-                    String cellType = blackListCellsNamesTypes.get(i).trim();
+                    String cellType = excludeCellsNamesTypes.get(i).trim();
                     Type<?> type = getType(cellType);
                     if (type == null)
-                        validationErrors.append("Non-Exportable Cell Type (" + NONEXPORTABLE_CELLS + ") '" + cellType + "' not specified or is invalid\n");
+                        validationErrors.append("Excluded Cell Type (" + EXCLUDE_CELLS + ") '" + cellType + "' not specified or is invalid\n");
                 }
             }
         }
@@ -410,15 +410,15 @@ public class CmdLineOptions
         return "\n" +
                 "Export a dataset to a parquet file.  Use the cells present in the dataset's records\n" +
                 "to deduce the schema (i.e. field names and types) required for the parquet file.\n\n" +
-                "terracotta-tcstore-exporter.jar -s server -d datasetName -t datasetType -o outputFolder\n" +
-                "                       [-ss schemaSampleSize] [-a]\n" +
-                "                       [-fn cellName -ft cellType -flv lowValue -fhv highValue] [-ia]\n" +
-                "                       [-mc maxColumns] [-mcia] [-mcmf]\n" +
-                "                       [-ms maxStringLength] [-mb maxByteLength] [-e <cellname, celltype>,...] [--n <cellname, celltype>,...] [-p]\n\n" +
+                "terracotta-tcstore-exporter.jar -s <server> -d <datasetName> -t <datasetType> -o <outputFolder>\n" +
+                "                       [-ss <schemaSampleSize>] [-a]\n" +
+                "                       [-fn <cellName> -ft <cellType> -flv <lowValue> -fhv <highValue>] [-ia]\n" +
+                "                       [-mc <maxColumns>] [-mcia] [-mcmf]\n" +
+                "                       [-ms <maxStringLength>] [-mb <maxByteLength>] [-i <cellname>, <celltype> [, ...]] [-e <cellname>, <celltype> [, ...] [-p]\n\n" +
                 "Examples:\n" +
-                "java - jar terracotta-tcstore-exporter.jar -s terracotta://localhost:9410 -d DS1 -t LONG -o C:\\temp\n" +
-                "java - jar terracotta-tcstore-exporter.jar -s terracotta://localhost:9410 -d DS1 -t LONG -o C:\\temp -fn InstantDateKey -ft LONG -flv 0 -fhv 20000000 -p\n" +
-                "java - jar terracotta-tcstore-exporter.jar -s terracotta://localhost:9410 -d DS1 -t LONG -o C:\\temp -fn CustomIncrementorKey -ft DOUBLE -flv 0.0 -fhv 1000.0 -ms 256 -n \"PdfCell,BYTES\" -p\n\n" +
+                "java -jar terracotta-tcstore-exporter.jar -s terracotta://localhost:9410 -d DS1 -t LONG -o C:\\temp\n" +
+                "java -jar terracotta-tcstore-exporter.jar -s terracotta://localhost:9410 -d DS1 -t LONG -o C:\\temp -fn InstantDateKey -ft LONG -flv 0 -fhv 20000000 -p\n" +
+                "java -jar terracotta-tcstore-exporter.jar -s terracotta://localhost:9410 -d DS1 -t LONG -o C:\\temp -fn CustomIncrementorKey -ft DOUBLE -flv 0.0 -fhv 1000.0 -ms 256 -e \"PdfCell,BYTES\" -p\n\n" +
                 helpEntry(SERVER_URI, SERVER_URI_DESC, true) +
                 helpEntry(DATASET_NAME, DATASET_NAME_DESC, true) +
                 helpEntry(DATASET_TYPE, DATASET_TYPE_DESC, true) +
@@ -435,8 +435,8 @@ public class CmdLineOptions
                 helpEntry(MAX_COLUMNS_NO_ABORT_MULTIFILE, MAX_COLUMNS_NO_ABORT_MULTIFILE_DESC, false) +
                 helpEntry(MAX_STRING_LENGTH, MAX_STRING_LENGTH_DESC, false) +
                 helpEntry(MAX_BYTE_COUNT, MAX_BYTE_COUNT_DESC, false) +
-                helpEntry(EXPORTABLE_CELLS, EXPORTABLE_CELLS_DESC, false) +
-                helpEntry(NONEXPORTABLE_CELLS, NONEXPORTABLE_CELLS_DESC, false) +
+                helpEntry(INCLUDE_CELLS, INCLUDE_CELLS_DESC, false) +
+                helpEntry(EXCLUDE_CELLS, EXCLUDE_CELLS_DESC, false) +
                 helpEntry(LOG_STREAM_PLAN, LOG_STREAM_PLAN_DESC, false);
     }
 
@@ -537,12 +537,12 @@ public class CmdLineOptions
         return logStreamPlan;
     }
 
-    public List<String> getWhiteListCellsNamesTypes() {
-        return whiteListCellsNamesTypes;
+    public List<String> getIncludeCellsNamesTypes() {
+        return includeCellsNamesTypes;
     }
 
-    public List<String> getBlackListCellsNamesTypes() {
-        return blackListCellsNamesTypes;
+    public List<String> getExcludeCellsNamesTypes() {
+        return excludeCellsNamesTypes;
     }
 
     public Integer getMaxStringLength() {
