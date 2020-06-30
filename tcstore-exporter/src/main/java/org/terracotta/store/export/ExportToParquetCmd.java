@@ -73,19 +73,19 @@ public class ExportToParquetCmd
             options.setLogStreamPlan(cmd.getLogStreamPlan());
             options.setMaxStringLength(cmd.getMaxStringLength());
             options.setMaxByteArraySize(cmd.getMaxByteArraySize());
-            List<String> whiteListCells = cmd.getWhiteListCellsNamesTypes();
-            for (int i = 0; i < cmd.getWhiteListCellsNamesTypes().size(); i++) {
+            List<String> includeCells = cmd.getIncludeCellsNamesTypes();
+            for (int i = 0; i < cmd.getIncludeCellsNamesTypes().size(); i++) {
                 CellDefinition<?> cellDef = CellDefinition.define(
-                        whiteListCells.get(i).trim(),
-                        cmd.getType(whiteListCells.get(++i))); //abort if define() fails
-                options.addWhiteListCellDefinition(cellDef);
+                        includeCells.get(i).trim(),
+                        cmd.getType(includeCells.get(++i))); //abort if define() fails
+                options.addIncludeCellDefinition(cellDef);
             }
-            List<String> blackListCells = cmd.getBlackListCellsNamesTypes();
-            for (int i = 0; i < blackListCells.size(); i++) {
+            List<String> excludeCells = cmd.getExcludeCellsNamesTypes();
+            for (int i = 0; i < excludeCells.size(); i++) {
                 CellDefinition<?> cellDef = CellDefinition.define(
-                        blackListCells.get(i).trim(),
-                        cmd.getType(blackListCells.get(++i))); //abort if define() fails
-                options.addBlackListCellDefinition(cellDef);
+                        excludeCells.get(i).trim(),
+                        cmd.getType(excludeCells.get(++i))); //abort if define() fails
+                options.addExcludeCellDefinition(cellDef);
             }
 
             LOG.info("Connecting to server: '" + uri + "'");
