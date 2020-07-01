@@ -220,6 +220,7 @@ public class ParquetSchema {
         else {
             fieldName = String.format("%s_%s", cell.name(), getTcType(cell.type()) );
         }
+        fieldName = fieldName.replace(' ', '_');
         return fieldName;
     }
 
