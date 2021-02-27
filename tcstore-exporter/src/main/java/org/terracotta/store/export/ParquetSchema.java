@@ -33,22 +33,20 @@ import java.util.function.Predicate;
 import java.util.stream.Collectors;
 
 import static java.util.Objects.requireNonNull;
+import static org.terracotta.store.export.AvroSchema.REC_KEY;
 
 public class ParquetSchema {
 
     private static final Logger LOG = LoggerFactory.getLogger(ParquetSchema.class);
-    public static final String REC_KEY = "RecKey";
-    public static final String STORE_LIST_TYPE = "Type<StoreList>";
-    public static final String STORE_MAP_TYPE = "Type<StoreMap>";
 
-    private DatasetManager dsManager;
-    private ParquetOptions options;
-    private String datasetName;
-    private Type datasetType;
+    private final DatasetManager dsManager;
+    private final ParquetOptions options;
+    private final String datasetName;
+    private final Type<?> datasetType;
 
     private List<Schema> schemas;
     private Boolean usingFilterCell = false;
-    private Map<CellDefinition<?>, String> uniqueFieldNames;
+    private final Map<CellDefinition<?>, String> uniqueFieldNames;
     private Map<CellDefinition<?>, Schema> cellDefinitionSchemaMap;
 
     ParquetSchema(DatasetManager dsManager, String datasetName, Type<?> datasetType, ParquetOptions options) throws StoreExportException
@@ -71,7 +69,7 @@ public class ParquetSchema {
     private void initialize() throws StoreExportException {
         // Schema initialization must be completed before any dataset export can happen.
         // - sample the target dataset for all unique cells
-        // - modify the uniqe cells based on the included and excluded cells
+        // - modify the unique cells based on the included and excluded cells
         // - determine how many schemas must be created based on configured 'max columns' option
         // - handle aborting the initialization based on configured 'ignore abort' option
         // - create an Avro schema per set of partitioned dataset cells
@@ -81,7 +79,7 @@ public class ParquetSchema {
         schemas = new ArrayList<>();
         cellDefinitionSchemaMap = new HashMap<>();
 
-        try (Dataset<?> dataset = dsManager.getDataset(this.datasetName, this.datasetType)) {
+        try (Dataset<?> dataset = dsManager.getDataset(datasetName, (Type)datasetType)) {
             Set<CellDefinition<?>> uniqueCells;
             try (RecordStream<?> records = dataset.reader().records()) {
                 RecordStream<?> working = records;
@@ -93,7 +91,7 @@ public class ParquetSchema {
                     .limit(options.getSchemaSampleSize())
                     .flatMap(Record::stream)
                     .map(Cell::definition)
-                    .filter(c -> getAvroType(c.type()) != null)
+                    .filter(c -> AvroSchema.getAvroType(c) != null)
                     .collect(Collectors.toSet());
             }
             // We have a unique list of all cells present in the dataset (for the given record sample)
@@ -178,105 +176,17 @@ public class ParquetSchema {
         }
     }
 
-    private Schema createSchema(Set<CellDefinition<?>> uniqueCells)
+    public Schema createSchema(Set<CellDefinition<?>> uniqueCells)
     {
-        // Avro format
-        StringBuilder sb = new StringBuilder();
-        sb.append("{\"type\": \"record\",\n");
-        sb.append(" \"name\": \"" + datasetName + "\",\n");
-        sb.append(" \"fields\": [ \n");
-        for (CellDefinition<?> cell : uniqueCells) {
-            String fieldName = getUniqueFieldName(cell, uniqueCells);
-            String avroType = getAvroType(cell.type());
-            if (avroType != null && fieldName != null && !fieldName.isEmpty()) {
-                uniqueFieldNames.put(cell, fieldName); // referenced during file write
-                sb.append(" { \"name\": \"" + fieldName + "\", \"type\": ");
-                if (fieldName.equals(REC_KEY)) {
-                    sb.append("\"" + avroType + "\" },\n");  // nulls not allowed
-                } else {
-                    sb.append("[\"" + avroType + "\", \"null\"] },\n"); // nulls allowed
-                }
-            }
-        }
-        String sbString = sb.toString();
-        String schemaString = sbString.substring(0, sbString.length()-2) + "\n]}\n";  // trim the last ','
-        LOG.info("Schema extracted from dataset sampling " + options.getSchemaSampleSize().toString() + " records:\n" + schemaString);
-        Schema.Parser parser = new Schema.Parser().setValidate(true);
-        return parser.parse(schemaString);
-    }
+        AvroSchema avroSchema = new AvroSchema(datasetName,
+            options.getAppendTypeToSchemaFieldName(),
+            options.getFilterCell());
 
-    private String getUniqueFieldName(CellDefinition<?> cell, Set<CellDefinition<?>> cells) {
+        Schema schema = avroSchema.createSchema(uniqueCells);
+        uniqueFieldNames.putAll(avroSchema.getUniqueFieldNames());
 
-        // Returns a unique schema Field name based on the cell definition name and cell type.
-        // When same-named cells are found in the set, the field name becomes <name>_<type>.
-        // When the cell name is unique, the field name is simply the cell name
-
-        String fieldName;
-        if (cell.name().equals(REC_KEY) ||
-            cell.name().equals(options.getFilterCellName()) ||
-            (!options.getAppendTypeToSchemaFieldName() && cells.stream().filter(s -> s.name().equals(cell.name())).count() == 1)) {
-            fieldName = cell.name();
-        }
-        else {
-            fieldName = String.format("%s_%s", cell.name(), getTcType(cell.type()) );
-        }
-        fieldName = fieldName.replace(' ', '_');
-        return fieldName;
-    }
-
-    private String getAvroType(Type<?> type)
-    {
-        switch (type.asEnum()) {
-            case BOOL:
-                return "boolean";
-            case CHAR:
-                return "string";
-            case INT:
-                return "int";
-            case LONG:
-                return "long";
-            case DOUBLE:
-                return "double";
-            case STRING:
-                return "string";
-            case BYTES:
-                return "bytes";
-            //case LIST:
-            //    return null;  // map cells in parquet not yet supported
-            //case MAP:
-            //    return null; // list cells in parquet not yet supported
-            default:
-                return null; // maps and lists will be caught here
-        }
-    }
-
-    public String getTcType(Type<?> type)
-    {
-        switch (type.asEnum()) {
-            case BOOL:
-                return "BOOLEAN";
-            case CHAR:
-                return "CHAR";
-            case INT:
-                return "INT";
-            case LONG:
-                return "LONG";
-            case DOUBLE:
-                return "DOUBLE";
-            case STRING:
-                return "STRING";
-            case BYTES:
-                return "BYTES";
-            default: {
-                String t = type.toString();
-                if (t.equals(STORE_LIST_TYPE))
-                    return "LIST";
-                else if (t.equals(STORE_MAP_TYPE))
-                    return "MAP";
-                else
-                    return "";
-            }
-        }
+        LOG.info("Schema extracted from dataset sampling " + options.getSchemaSampleSize().toString() + " records:\n" + avroSchema.toString());
+        return schema;
     }
 
     public String getFieldName(CellDefinition<?> cell) {

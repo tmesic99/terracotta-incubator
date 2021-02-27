@@ -363,7 +363,7 @@ public class CmdLineOptions
         }
         if (includeCellsNamesTypes.size() > 0)
         {
-            Integer count = includeCellsNamesTypes.size();
+            int count = includeCellsNamesTypes.size();
             if (count %2 > 0)
                 validationErrors.append("Incorrect number of entries in the Included Cell List (" + INCLUDE_CELLS + ").  Cells must be specified as comma-separated <name>,<type> pairs.\n");
             for (int i = 0; i < count; i++) {
@@ -447,7 +447,7 @@ public class CmdLineOptions
         return String.format("%-8s%s\n", option, name);
     }
 
-    public Type getType(String type)
+    public Type<?> getType(String type)
     {
         switch (type) {
             case TYPE_BOOL:

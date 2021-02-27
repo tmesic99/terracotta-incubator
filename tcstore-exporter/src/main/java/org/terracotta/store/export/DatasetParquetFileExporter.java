@@ -56,12 +56,12 @@ public class DatasetParquetFileExporter
 {
     private static final Logger LOG = LoggerFactory.getLogger(DatasetParquetFileExporter.class);
 
-    private ParquetSchema schemas;
-    private DatasetManager dsManager;
-    private ParquetOptions options;
-    private String datasetName;
-    private Type datasetType;
-    private String outputFileFolder;
+    private final ParquetSchema schemas;
+    private final DatasetManager dsManager;
+    private final ParquetOptions options;
+    private final String datasetName;
+    private final Type<?> datasetType;
+    private final String outputFileFolder;
 
     private Map<Schema, ParquetWriter<GenericData.Record>> schemaWriterMap;
     private List<String> crcFileNames;
@@ -76,12 +76,12 @@ public class DatasetParquetFileExporter
      * @param datasetType      the key type of the Dataset from which to export records
      * @param outputFileFolder the name of the folder in which to output files
      * @param options          options to control aspects of the export processing
-     * @throws Exception
+     * @throws StoreExportException
      * @see ParquetOptions
      */
     public DatasetParquetFileExporter(DatasetManager dsManager,
                                       String datasetName,
-                                      Type datasetType,
+                                      Type<?> datasetType,
                                       String outputFileFolder,
                                       ParquetOptions options) throws StoreExportException {
         this.dsManager = requireNonNull(dsManager);
@@ -133,7 +133,7 @@ public class DatasetParquetFileExporter
      * @see ParquetExportStats
      */
     public ParquetExportStats exportDataset(Number lowRangeValue, Number highRangeValue) throws StoreExportException {
-        // Supported behaviour includes::
+        // Supported behaviour includes:
         //   If filter cell has not been defined then abort or continue
         //   If filter cell has been defined but has an unsupported type then abort or continue
         //   If filter cell has been defined but does not exist then abort or continue
@@ -143,7 +143,7 @@ public class DatasetParquetFileExporter
         ParquetExportStats stats = new ParquetExportStats();
         Boolean useFilterCell = schemas.getUsingFilterCell();
         String filterCellName = options.getFilterCellName();
-        Type filterCellType = options.getFilterCellType();
+        Type<?> filterCellType = options.getFilterCellType();
         Predicate<Record<?>> rangeFilter = null;
 
         if (filterCellName.isEmpty() && filterCellType == null) {
@@ -181,7 +181,7 @@ public class DatasetParquetFileExporter
     private ParquetExportStats export(Predicate<Record<?>> filterPredicate) throws StoreExportException {
         ParquetExportStats stats = new ParquetExportStats();
 
-        try (Dataset<?> dataset = dsManager.getDataset(datasetName, datasetType)) {
+        try (Dataset<?> dataset = dsManager.getDataset(datasetName, (Type)datasetType)) {
 
             // Since we support the ability to split a dataset across multiple parquet files - each with its
             // own defined schema, multiple writers are required to support the number
@@ -220,18 +220,18 @@ public class DatasetParquetFileExporter
                 working.forEach(r ->
                 {
                     // A dataset's record's cells can be split across multiple parquet files by virtue of
-                    // those cells having been split across mulitple schemas.
+                    // their cell definitions having been partitioned across multiple schemas.
                     // Each schema is dedicated to a specific writer and each writer writes
-                    // parquet records associated with those same schema
+                    // parquet records only for cells that are associated with that particular schema.
 
                     Map<Schema, GenericData.Record> schemaRecordMap = new HashMap<>();
                     Map<ParquetWriter<GenericData.Record>, GenericData.Record> writerRecordMap = new HashMap<>();
                     for (Map.Entry<Schema, ParquetWriter<GenericData.Record>> entry : schemaWriterMap.entrySet()) {
-                        // Create a new record for every unique schema and associate (map) that record
+                        // Create a new record for every unique schema and map that record
                         // to the schema and to the dedicated writer created for that schema.
                         Schema schema = entry.getKey();
                         GenericData.Record pqRecord = new GenericData.Record(schema);
-                        pqRecord.put(ParquetSchema.REC_KEY, r.getKey());
+                        pqRecord.put(AvroSchema.REC_KEY, r.getKey());
                         schemaRecordMap.put(schema, pqRecord);
                         writerRecordMap.put(entry.getValue(), pqRecord);
                     }
@@ -329,7 +329,7 @@ public class DatasetParquetFileExporter
                 LOG.info(String.format("%,d records failed writing to parquet file", stats.getFailedRecordWrites()));
                 for (Map.Entry<CellDefinition<?>, Integer> entry : schemaAbsentCells.entrySet()) {
                     String message = String.format("%,d occurrences of cell '%s (%s)' not written to parquet file (cell definition missing from schema).",
-                            entry.getValue(), entry.getKey().name(), schemas.getTcType(entry.getKey().type()));
+                            entry.getValue(), entry.getKey().name(), AvroSchema.getTcType(entry.getKey()));
                     LOG.info(message);
                     stats.addSchemaAbsentCellCounts(entry.getKey(), entry.getValue());
                 }
@@ -416,28 +416,7 @@ public class DatasetParquetFileExporter
     }
 
     private Configuration getConfiguration() {
-        Configuration conf = new Configuration();
-        return conf;
-
-
-        // For future dev/integration with Azure possibly?
-        /*
-        // These settings will upload files directly to S3.  Taken from:
-        // https://stackoverflow.com/questions/47355038/how-to-generate-parquet-file-using-pure-java-including-date-decimal-types-an
-
-        conf.set("fs.s3a.access.key", "ACCESSKEY");
-        conf.set("fs.s3a.secret.key", "SECRETKEY");
-        //Below are some other helpful settings
-        //conf.set("fs.s3a.endpoint", "s3.amazonaws.com");
-        //conf.set("fs.s3a.aws.credentials.provider", "org.apache.hadoop.fs.s3a.SimpleAWSCredentialsProvider");
-        //conf.set("fs.hdfs.impl", org.apache.hadoop.hdfs.DistributedFileSystem.class.getName()); // Not needed unless you reference the hadoop-hdfs library.
-        //conf.set("fs.file.impl", org.apache.hadoop.fs.LocalFileSystem.class.getName()); // Uncomment if you get "No FileSystem for scheme: file" errors
-        Path filePath = new Path("s3a://your-bucket-name/examplefolder/data.parquet");
-        */
-
-        //https://hadoop.apache.org/docs/current/hadoop-aws/tools/hadoop-aws/index.html
-        //https://hadoop.apache.org/docs/current/hadoop-azure/index.html
-        //https://hadoop.apache.org/docs/current/hadoop-azure-datalake/index.html
+        return new Configuration();
     }
 
     private String establishOutputFileName(String dateFragment, String fileNumber) {

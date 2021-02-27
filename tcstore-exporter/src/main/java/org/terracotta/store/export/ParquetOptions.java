@@ -21,8 +21,6 @@ import com.terracottatech.store.Record;
 import com.terracottatech.store.Type;
 import com.terracottatech.store.definition.CellDefinition;
 import org.apache.parquet.hadoop.metadata.CompressionCodecName;
-import org.slf4j.Logger;
-import org.slf4j.LoggerFactory;
 
 import java.util.HashSet;
 import java.util.Set;
@@ -37,8 +35,6 @@ import java.util.function.Predicate;
  *     Also see https://parquet.apache.org/documentation/latest/
  */
 public class ParquetOptions {
-
-    private static final Logger LOG = LoggerFactory.getLogger(ParquetOptions.class);
 
     // Parquet file generation best practices:
     //   https://docs.dremio.com/advanced-administration/parquet-files.html?h=parquet
@@ -60,15 +56,15 @@ public class ParquetOptions {
     private Integer schemaSampleSize = 5;
     private Boolean appendTypeToSchemaFieldName = false;
     private String filterCellName = "";
-    private Type filterCellType = null;
+    private Type<?> filterCellType = null;
     private Boolean doNotAbortIfFilterCellMissing = false;
     private Integer maxOutputColumns = 800;
     private Boolean maxOutputColumnsNoAbort = false;
     private Boolean maxOutputColumnsUseMultiFile = false;
     private Boolean logStreamPlan = false;
     private CellDefinition<?> filterCell;
-    private Set<CellDefinition<?>> includeCells = new HashSet<>();
-    private Set<CellDefinition<?>> excludeCells = new HashSet<>();
+    private final Set<CellDefinition<?>> includeCells = new HashSet<>();
+    private final Set<CellDefinition<?>> excludeCells = new HashSet<>();
     private Integer maxStringLength = -1;
     private Integer maxByteArraySize = -1;
     private Predicate<Record<?>> schemaSampleFilter;
@@ -112,7 +108,7 @@ public class ParquetOptions {
     }
 
     public Boolean isFilterCell(CellDefinition<?> cell) {
-        return filterCell == null ? false : filterCell.equals(cell);
+        return filterCell != null && filterCell.equals(cell);
     }
 
     public CellDefinition<?> getFilterCell() {
@@ -180,7 +176,7 @@ public class ParquetOptions {
         return filterCellName;
     }
 
-    public Type getFilterCellType() {
+    public Type<?> getFilterCellType() {
         return filterCellType;
     }
 

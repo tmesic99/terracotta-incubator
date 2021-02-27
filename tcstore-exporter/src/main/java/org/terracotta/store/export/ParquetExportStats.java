@@ -39,7 +39,7 @@ public class ParquetExportStats
     private long recordsProcessed;
     private long stringsTruncated;
     private long arraysNullified;
-    private Map<CellDefinition<?>, Integer> schemaAbsentCellNoWriteCounts = new HashMap<>();
+    private final Map<CellDefinition<?>, Integer> schemaAbsentCellNoWriteCounts = new HashMap<>();
     private List<String> filenames;
     private List<String> filenamePaths;
 

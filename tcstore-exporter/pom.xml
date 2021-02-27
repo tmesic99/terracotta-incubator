@@ -33,11 +33,11 @@
         <logback>1.2.3</logback>
         <hadoop.core>1.2.1</hadoop.core>
         <parquet.avro>1.11.0</parquet.avro>
-        <tc_version>10.3.1.2.107</tc_version>
-        <tc_client_lib>/Users/jhouse/Downloads/terracotta-db-${tc_version}/client/lib</tc_client_lib>
-        <tc_store_lib>/Users/jhouse/Downloads/terracotta-db-${tc_version}/client/store</tc_store_lib>
+        <tc_version>10.7.0.1.27</tc_version>
+        <tc_kit_root>C:\Users\tmes\kits</tc_kit_root>
+        <tc_client_lib>${tc_kit_root}\terracotta-${tc_version}\client\lib</tc_client_lib>
+        <tc_store_lib>${tc_kit_root}\terracotta-${tc_version}\client\store</tc_store_lib>
         <tc_version_suffix>-${tc_version}</tc_version_suffix>
-
     </properties>
 
     <dependencies>
